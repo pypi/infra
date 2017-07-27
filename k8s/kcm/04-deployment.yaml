@@ -1,0 +1,39 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: kcm
+  name: kcm
+  namespace: kcm
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: kcm
+      name: kcm
+    spec:
+      serviceAccount: kcm
+      containers:
+        - name: kube-cert-manager
+          image: gcr.io/the-psf/kube-cert-manager@sha256:915b743680faf8ef798ad95b26607b8ad04d481330efab8c9d9869f68641876d
+          args:
+            - "-data-dir=/var/lib/cert-manager"
+            - "-acme-url=https://acme-staging.api.letsencrypt.org/directory"
+            # - "-acme-url=https://acme-v01.api.letsencrypt.org/directory"
+            - "-default-email=infrastructure-staff@python.org"
+            - "-default-provider=googlecloud"
+          env:
+            - name: GCE_PROJECT
+              value: the-psf
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/cert-manager
+      volumes:
+        - name: "data"
+          persistentVolumeClaim:
+            claimName: kcm-data
