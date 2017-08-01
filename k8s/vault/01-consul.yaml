@@ -5,6 +5,8 @@ metadata:
   labels:
     app: consul
   namespace: vault
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
 spec:
   ports:
     - port: 8300
@@ -95,6 +97,12 @@ spec:
               mountPath: /consul/config
             - name: consul-data
               mountPath: /consul/data
+          readinessProbe:
+            httpGet:
+              path: /v1/operator/raft/configuration
+              port: 8500
+            initialDelaySeconds: 10
+            periodSeconds: 30
       volumes:
         - name: consul-config
           configMap:
