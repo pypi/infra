@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul
+  labels:
+    app: consul
+  namespace: vault
+spec:
+  ports:
+    - port: 8300
+      name: server-rpc
+    - port: 8301
+      name: serf-lan
+    - port: 8302
+      name: serf-wan
+    - port: 8500
+      name: http-api
+    - port: 8600
+      name: dns-api
+  clusterIP: None
+  selector:
+    app: consul
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: consul
+    namespace: vault
+    labels:
+        app: consul
+data:
+  # Note: Updates to this will not take effect once the Consul cluster has
+  #       bootstrapped. Changes to these values will need to be made using the
+  #       consul command line.
+  autopilot.json: |
+    {
+      "autopilot": {
+        "cleanup_dead_servers": true,
+        "last_contact_threshold": "200ms",
+        "max_trailing_logs": 250,
+        "server_stabilization_time": "10s",
+        "redundancy_zone_tag": "zone",
+        "disable_upgrade_migration": false
+      }
+    }
+  # Note: Updates to this will take effect, but the pods will have to be
+  #       manually killed one by one to make it happen.
+  # TODO: Add a sidecar or something that can trigger a consul reload when it
+  #      detects changes.
+  config.json: |
+    {
+      "disable_remote_exec": true,
+      "disable_update_check": true
+    }
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: consul
+  namespace: vault
+spec:
+  serviceName: consul
+  replicas: 5
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: consul
+    spec:
+      containers:
+        - name: consul
+          image: gcr.io/the-psf/consul:v0.9.0@sha256:a06ae7eb334310870792d213206c65ebe626da2a4dfae5b880c08f4c38f7351b
+          args:
+            - "agent"
+            - "-server"
+            - "-ui"
+            - "-bootstrap-expect=5"
+            - "-retry-join=consul.vault"
+            - "-client=0.0.0.0"
+          ports:
+            - containerPort: 8300
+              name: server-rpc
+            - containerPort: 8301
+              name: serf-lan
+            - containerPort: 8302
+              name: serf-wan
+            - containerPort: 8500
+              name: http-api
+            - containerPort: 8600
+              name: dns-api
+          volumeMounts:
+            - name: consul-config
+              mountPath: /consul/config
+            - name: consul-data
+              mountPath: /consul/data
+      volumes:
+        - name: consul-config
+          configMap:
+            name: consul
+  volumeClaimTemplates:
+    - metadata:
+        name: consul-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi

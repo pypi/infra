@@ -1,0 +1,7 @@
+* Consul: If the cluster loses enough instances to lose quorum (e.g. mass pod
+          restart) then it will not be able to bring itself back up. This is
+          because the container IPs will have changed, and without quorum
+          autopilot cannot remove the broken nodes and re-add a new, healthy
+          one. If/when https://github.com/hashicorp/consul/issues/1580 gets
+          resolved, this should start working automatically. Until then losing
+          quorom will require human intervention.

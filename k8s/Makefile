@@ -1,4 +1,4 @@
-all: cluster-admins kcm
+all: cluster-admins kcm vault
 
 cluster-admins:
 	kubectl apply -f cluster-admins
@@ -6,4 +6,7 @@ cluster-admins:
 kcm:
 	kubectl apply -f kcm
 
-.PHONY: all cluster-admins kcm
+vault:
+	kubectl apply -f vault
+
+.PHONY: all cluster-admins kcm vault
