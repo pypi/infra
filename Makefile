@@ -6,4 +6,8 @@ k8s:
 	@$(MAKE) -C k8s
 
 
-.PHONY: k8s
+images:
+	@$(MAKE) -C images
+
+
+.PHONY: k8s images
