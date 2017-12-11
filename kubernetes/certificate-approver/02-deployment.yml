@@ -1,0 +1,24 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  namespace: kube-system
+  name: certificate-approver
+  labels:
+    app: certificate-approver
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: certificate-approver
+    spec:
+      serviceAccountName: certificate-approver
+      containers:
+        - name: certificate-approver
+          image: gcr.io/the-psf/certificate-approver:v1.0.0a1
+          resources:
+            limits:
+              memory: "50Mi"
+              cpu: "100m"
+          securityContext:
+            readOnlyRootFilesystem: true

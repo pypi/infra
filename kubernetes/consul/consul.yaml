@@ -1,0 +1,262 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: request-certificate
+rules:
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - create
+  - get
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/serverautoapprove
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: consul
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: request-certificate
+subjects:
+- kind: ServiceAccount
+  namespace: vault
+  name: consul
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: consul
+  namespace: vault
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consul
+  namespace: vault
+data:
+  server.json: |
+    {
+      "raft_protocol": 3,
+      "ca_file": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+      "cert_file": "/etc/tls/cert.pem",
+      "key_file": "/etc/tls/key.pem",
+      "verify_incoming": true,
+      "verify_outgoing": true,
+      "verify_server_hostname": true,
+      "ports": {
+        "https": 8443
+      },
+      "autopilot": {
+        "cleanup_dead_servers": true,
+        "last_contact_threshold": "300ms",
+        "max_trailing_logs": 250,
+        "server_stabilization_time": "10s"
+      }
+    }
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: consul
+  namespace: vault
+spec:
+  serviceName: consul-internal
+  replicas: 3
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: consul-internal
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - consul-internal
+              topologyKey: failure-domain.beta.kubernetes.io/zone
+      serviceAccountName: consul
+      initContainers:
+        - name: certificate-requestor
+          image: gcr.io/the-psf/certificate-requestor:v1.0.0a1
+          imagePullPolicy: Always
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          args:
+            - "--additional-dnsnames=consul-internal,consul-internal.vault,consul-internal.vault.svc.cluster.local,server.dc1.cluster.local"
+            - "--cert-dir=/etc/tls"
+            - "--namespace=$(NAMESPACE)"
+            - "--pod-ip=$(POD_IP)"
+            - "--pod-name=$(POD_NAME)"
+            - "--service-names=consul-internal"
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+      containers:
+        - name: consul
+          image: consul:1.0.1
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: INITIAL_CLUSTER_SIZE
+              value: "3"  # This should not change once consul has been created.
+            - name: GOSSIP_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: consul-gossip-secret
+                  key: key
+          args:
+            - "agent"
+            - "-advertise=$(POD_IP)"
+            - "-bind=0.0.0.0"
+            - "-bootstrap-expect=$(INITIAL_CLUSTER_SIZE)"
+            - "-retry-join=consul-0.consul-internal.$(NAMESPACE).svc.cluster.local"
+            - "-retry-join=consul-1.consul-internal.$(NAMESPACE).svc.cluster.local"
+            - "-retry-join=consul-2.consul-internal.$(NAMESPACE).svc.cluster.local"
+            - "-client=0.0.0.0"
+            - "-domain=cluster.local"
+            - "-encrypt=$(GOSSIP_ENCRYPTION_KEY)"
+            - "-config-file=/etc/consul/config/server.json"
+            - "-server"
+            - "-ui"
+          ports:
+            - containerPort: 8300
+              name: server-rpc
+            - containerPort: 8301
+              name: serf-lan
+            - containerPort: 8302
+              name: serf-wan
+            - containerPort: 8500
+              name: http-api
+            - containerPort: 8600
+              name: dns-api
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+            - name: consul-config
+              mountPath: /etc/consul/config
+            - name: consul-data
+              mountPath: /consul/data
+          readinessProbe:
+            httpGet:
+              path: /v1/operator/raft/configuration
+              port: 8500
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                - /bin/sh
+                - -c
+                - consul leave
+      volumes:
+        - name: tls
+          emptyDir: {}
+        - name: consul-config
+          configMap:
+            name: consul
+  volumeClaimTemplates:
+    - metadata:
+        name: consul-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: consul
+  namespace: vault
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: consul
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  labels:
+    app: consul-internal
+  name: consul-internal
+  namespace: vault
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8500
+    protocol: TCP
+    targetPort: 8500
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  - name: rpc
+    port: 8400
+    protocol: TCP
+    targetPort: 8400
+  - name: serflan-tcp
+    port: 8301
+    protocol: TCP
+    targetPort: 8301
+  - name: serflan-udp
+    port: 8301
+    protocol: UDP
+    targetPort: 8301
+  - name: serfwan-tcp
+    port: 8302
+    protocol: TCP
+    targetPort: 8302
+  - name: serfwan-udp
+    port: 8302
+    protocol: UDP
+    targetPort: 8302
+  - name: server
+    port: 8300
+    protocol: TCP
+    targetPort: 8300
+  - name: consuldns
+    port: 8600
+    protocol: TCP
+    targetPort: 8600
+  selector:
+    app: consul-internal
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
