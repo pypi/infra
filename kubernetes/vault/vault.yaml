@@ -192,7 +192,9 @@ spec:
               - IPC_LOCK
       volumes:
         - name: tls
-          emptyDir: {}
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
         - name: consul-data
           emptyDir: {}
         - name: consul-config

@@ -163,7 +163,9 @@ spec:
                 - consul leave
       volumes:
         - name: tls
-          emptyDir: {}
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
         - name: consul-config
           configMap:
             name: consul
