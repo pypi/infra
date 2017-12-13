@@ -1,0 +1,65 @@
+#!/bin/bash
+
+_term() {
+  kill -TERM %1;
+}
+
+trap _term EXIT
+
+command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' command installed" && exit 1)
+
+temp_file=$(mktemp)
+kubectl port-forward -n vault consul-0 :8500 > $temp_file 2>&1 &
+
+while [ 1 ]; do
+  echo "checking if kubectl port is open..."
+  grep 'Forwarding from' $temp_file > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    output=$(grep 'Forwarding from' $temp_file)
+    echo "Success: $output"
+    break
+  fi
+  sleep 1
+done
+
+port=$(echo $output | awk '{print $3}' | awk -F":" '{print $2}')
+
+if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
+  response=$(curl --silent --show-error --fail --request PUT http://127.0.0.1:$port/v1/acl/bootstrap)
+  if [ $? -ne 0 ]; then
+    echo "bootstrapping ACLs failed, check networking, or perhaps they have already been bootstrapped"
+    echo $response
+    exit 1
+  fi
+  
+  bootstrap_token=$(echo $response | jq -r '.ID')
+  echo "************************* Secure this! ***************************"
+  echo "Consul ACL Bootstrap Token: $bootstrap_token"
+  echo "************************* Secure this! ***************************"
+else
+  bootstrap_token=$CONSUL_BOOTSTRAP_ACL_TOKEN
+fi
+
+AGENT_POLICY=$(python3 -c "import json; policy_doc = open('policies/agent.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+response=$(
+  curl --silent --show-error --fail -XPUT \
+  --header "X-Consul-Token: $bootstrap_token" \
+  --data '{"Name": "Agent Token", "Type": "client", "Rules": '"$AGENT_POLICY"'}' \
+  localhost:$port/v1/acl/create
+)
+if [ $? -ne 0 ]; then
+  echo "Creating Initial Agent Token failed, check networking"
+  echo $response
+  exit 1
+fi
+agent_token=$(echo $response | jq -r '.ID')
+echo "Captured Agent Token, applying to initial cluster"
+
+for i in 0 1 2; do
+  kubectl exec -it --tty -n vault consul-$i -- curl \
+      --silent --show-error --fail \
+      --request PUT \
+      --header "X-Consul-Token: $bootstrap_token" \
+      --data '{"Token": "'"$agent_token"'"}' \
+      http://127.0.0.1:8500/v1/agent/token/acl_agent_token
+done

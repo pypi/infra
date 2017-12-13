@@ -29,6 +29,7 @@ data:
       "ca_file": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
       "cert_file": "/etc/tls/cert.pem",
       "acl_datacenter": "us-east1",
+      "acl_default_policy": "deny",
       "key_file": "/etc/tls/key.pem",
       "verify_incoming": true,
       "verify_outgoing": true,
