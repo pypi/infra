@@ -26,7 +26,6 @@ metadata:
 data:
   server.json: |
     {
-      "raft_protocol": 3,
       "ca_file": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
       "cert_file": "/etc/tls/cert.pem",
       "key_file": "/etc/tls/key.pem",
