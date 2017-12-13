@@ -28,6 +28,7 @@ data:
     {
       "ca_file": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
       "cert_file": "/etc/tls/cert.pem",
+      "acl_datacenter": "us-east1",
       "key_file": "/etc/tls/key.pem",
       "verify_incoming": true,
       "verify_outgoing": true,
@@ -88,7 +89,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           args:
-            - "--additional-dnsnames=consul-internal,consul-internal.vault,consul-internal.vault.svc.cluster.local,server.dc1.cluster.local"
+            - "--additional-dnsnames=consul-internal,consul-internal.vault,consul-internal.vault.svc.cluster.local,server.us-east1.cluster.local"
             - "--cert-dir=/etc/tls"
             - "--namespace=$(NAMESPACE)"
             - "--pod-ip=$(POD_IP)"
@@ -126,6 +127,7 @@ spec:
             - "-retry-join=consul-2.consul-internal.$(NAMESPACE).svc.cluster.local"
             - "-client=0.0.0.0"
             - "-domain=cluster.local"
+            - "-datacenter=us-east1"
             - "-encrypt=$(GOSSIP_ENCRYPTION_KEY)"
             - "-config-file=/etc/consul/config/server.json"
             - "-server"
