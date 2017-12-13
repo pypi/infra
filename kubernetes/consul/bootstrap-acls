@@ -33,9 +33,9 @@ if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
   fi
   
   bootstrap_token=$(echo $response | jq -r '.ID')
-  echo "************************* Secure this! ***************************"
+  echo "************************* Secure this! *************************"
   echo "Consul ACL Bootstrap Token: $bootstrap_token"
-  echo "************************* Secure this! ***************************"
+  echo "************************* Secure this! *************************"
 else
   bootstrap_token=$CONSUL_BOOTSTRAP_ACL_TOKEN
 fi
