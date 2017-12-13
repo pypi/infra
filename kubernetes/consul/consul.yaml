@@ -183,13 +183,13 @@ spec:
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
-  name: consul
+  name: consul-internal
   namespace: vault
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: consul
+      app: consul-internal
 ---
 apiVersion: v1
 kind: Service
