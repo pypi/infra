@@ -93,7 +93,6 @@ spec:
       initContainers:
         - name: certificate-requestor
           image: gcr.io/the-psf/certificate-requestor:v1.0.0a1
-          imagePullPolicy: Always
           env:
             - name: NAMESPACE
               valueFrom:
