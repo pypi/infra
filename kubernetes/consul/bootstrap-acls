@@ -6,7 +6,8 @@ _term() {
 
 trap _term EXIT
 
-command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' command installed" && exit 1)
+command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
+command -v consul > /dev/null 2>&1 || (echo "you must have 'consul' installed" && exit 1)
 
 temp_file=$(mktemp)
 kubectl port-forward -n vault consul-0 :8500 > $temp_file 2>&1 &
@@ -39,6 +40,20 @@ if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
 else
   bootstrap_token=$CONSUL_BOOTSTRAP_ACL_TOKEN
 fi
+
+echo "writing anonymous ACL"
+ANON_POLICY=$(python3 -c "import json; policy_doc = open('policies/anonymous.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+response=$(curl -s --show-error --fail \
+             --header "X-Consul-Token: $bootstrap_token" \
+             --request PUT \
+             --data '{"ID": "anonymous", "Rules": '"$ANON_POLICY"'}' \
+             http://127.0.0.1:$port/v1/acl/update)
+if [ $? -ne 0 ]; then
+  echo "writing anonymous ACL failed, check networking"
+  echo $response
+  exit 1
+fi
+echo "wrote anonymous ACL"
 
 keyring=$(curl -s --show-error --fail -H"X-Consul-Token: $bootstrap_token" http://127.0.0.1:$port/v1/operator/keyring)
 
@@ -103,3 +118,25 @@ for i in 0 1 2; do
       --data '{"Token": "'"$agent_token"'"}' \
       http://127.0.0.1:8500/v1/agent/token/acl_agent_token
 done
+
+stored_vault_token=$(kubectl -n vault get secret vault-consul-token -o json | jq -r '.data.token' | openssl base64 -d)
+
+if [ "$stored_vault_token" = "null" ]; then
+  echo "No Vault Server Consul Token found, creating a new one"
+  AGENT_POLICY=$(python3 -c "import json; policy_doc = open('policies/vault.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+  response=$(
+    curl --silent --show-error --fail -XPUT \
+    --header "X-Consul-Token: $bootstrap_token" \
+    --data '{"Name": "Vault Server Token", "Type": "client", "Rules": '"$AGENT_POLICY"'}' \
+    localhost:$port/v1/acl/create
+  )
+  if [ $? -ne 0 ]; then
+    echo "Creating Vault Server Consul Token failed, check networking"
+    echo $response
+    exit 1
+  fi
+  token=$(echo $response | jq -r '.ID')
+  echo "Captured newly created Vault Server Consul Token, storing in secret vault-consul-token"
+  kubectl patch secret -n vault vault-consul-token -p '{"data": {"token": "'"$(printf $token | openssl base64)"'"}}'
+  echo "Stored vault-consul-token"
+fi
