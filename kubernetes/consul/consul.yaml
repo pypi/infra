@@ -28,9 +28,9 @@ data:
     {
       "ca_file": "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
       "cert_file": "/etc/tls/cert.pem",
+      "key_file": "/etc/tls/key.pem",
       "acl_datacenter": "us-east1",
       "acl_default_policy": "deny",
-      "key_file": "/etc/tls/key.pem",
       "verify_incoming": true,
       "verify_outgoing": true,
       "verify_server_hostname": true,
@@ -44,6 +44,24 @@ data:
         "server_stabilization_time": "10s"
       }
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consul-scripts
+  namespace: vault
+data:
+  write-secrets.sh: |
+    if [ "$CONSUL_ACL_AGENT_TOKEN" != "null" ]; then
+      cat > /etc/consul/secrets/acl_agent_token.json <<EOF
+    {"acl_agent_token": "$CONSUL_ACL_AGENT_TOKEN"}
+    EOF
+      echo "Wrote /etc/consul/secrets/acl_agent_token.json"
+    fi
+    cat > /etc/consul/secrets/encrypt.json <<EOF
+    {"encrypt": "$GOSSIP_ENCRYPTION_KEY"}
+    EOF
+    echo "Wrote /etc/consul/secrets/encrypt.json"
 ---
 apiVersion: apps/v1beta1
 kind: StatefulSet
@@ -99,6 +117,26 @@ spec:
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
+        - name: secret-writer
+          image: alpine:3.7
+          env:
+            - name: CONSUL_ACL_AGENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: consul-agent-token
+                  key: token
+            - name: GOSSIP_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: consul-gossip-key
+                  key: key
+          command: ['/bin/sh']
+          args: ['/opt/scripts/write-secrets.sh']
+          volumeMounts:
+            - name: consul-secrets
+              mountPath: /etc/consul/secrets
+            - name: consul-scripts
+              mountPath: /opt/scripts
       containers:
         - name: consul
           image: consul:1.0.1
@@ -113,11 +151,6 @@ spec:
                   fieldPath: metadata.namespace
             - name: INITIAL_CLUSTER_SIZE
               value: "3"  # This should not change once consul has been created.
-            - name: GOSSIP_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: consul-gossip-secret
-                  key: key
           args:
             - "agent"
             - "-advertise=$(POD_IP)"
@@ -129,8 +162,8 @@ spec:
             - "-client=0.0.0.0"
             - "-domain=cluster.local"
             - "-datacenter=us-east1"
-            - "-encrypt=$(GOSSIP_ENCRYPTION_KEY)"
             - "-config-file=/etc/consul/config/server.json"
+            - "-config-dir=/etc/consul/secrets/"
             - "-server"
             - "-ui"
           ports:
@@ -149,6 +182,8 @@ spec:
               mountPath: /etc/tls
             - name: consul-config
               mountPath: /etc/consul/config
+            - name: consul-secrets
+              mountPath: /etc/consul/secrets
             - name: consul-data
               mountPath: /consul/data
           readinessProbe:
@@ -169,9 +204,16 @@ spec:
           emptyDir:
             medium: "Memory"
             sizeLimit: "1M"
+        - name: consul-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
         - name: consul-config
           configMap:
             name: consul
+        - name: consul-scripts
+          configMap:
+            name: consul-scripts
   volumeClaimTemplates:
     - metadata:
         name: consul-data

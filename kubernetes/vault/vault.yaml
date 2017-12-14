@@ -89,7 +89,6 @@ spec:
       initContainers:
         - name: certificate-requestor
           image: gcr.io/the-psf/certificate-requestor:v1.0.0a1
-          imagePullPolicy: Always
           env:
             - name: NAMESPACE
               valueFrom:
@@ -113,6 +112,26 @@ spec:
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
+        - name: secret-writer
+          image: alpine:3.7
+          env:
+            - name: CONSUL_ACL_AGENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: consul-agent-token
+                  key: token
+            - name: GOSSIP_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: consul-gossip-key
+                  key: key
+          command: ['/bin/sh']
+          args: ['/opt/scripts/write-secrets.sh']
+          volumeMounts:
+            - name: consul-secrets
+              mountPath: /etc/consul/secrets
+            - name: consul-scripts
+              mountPath: /opt/scripts
       containers:
         - name: consul
           image: consul:1.0.1
@@ -125,21 +144,17 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: GOSSIP_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: consul-gossip-secret
-                  key: key
           args:
             - "agent"
             - "-advertise=$(POD_IP)"
             - "-bind=0.0.0.0"
+            - "-datacenter=us-east1"
             - "-retry-join=consul-0.consul-internal.$(NAMESPACE).svc.cluster.local"
             - "-retry-join=consul-1.consul-internal.$(NAMESPACE).svc.cluster.local"
             - "-retry-join=consul-2.consul-internal.$(NAMESPACE).svc.cluster.local"
             - "-domain=cluster.local"
-            - "-encrypt=$(GOSSIP_ENCRYPTION_KEY)"
             - "-config-file=/etc/consul/config/server.json"
+            - "-config-dir=/etc/consul/secrets/"
           ports:
             - containerPort: 8300
               name: server-rpc
@@ -156,6 +171,8 @@ spec:
               mountPath: /etc/tls
             - name: consul-config
               mountPath: /etc/consul/config
+            - name: consul-secrets
+              mountPath: /etc/consul/secrets
             - name: consul-data
               mountPath: /consul/data
         - name: vault-server
@@ -195,11 +212,18 @@ spec:
           emptyDir:
             medium: "Memory"
             sizeLimit: "1M"
+        - name: consul-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
         - name: consul-data
           emptyDir: {}
         - name: consul-config
           configMap:
             name: consul
+        - name: consul-scripts
+          configMap:
+            name: consul-scripts
         - name: vault-config
           configMap:
             name: vault-server
