@@ -1,34 +1,16 @@
 #!/bin/bash
 
-_term() {
-  kill -TERM %1;
-}
-
-trap _term EXIT
-
 command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
 command -v consul > /dev/null 2>&1 || (echo "you must have 'consul' installed" && exit 1)
 
-temp_file=$(mktemp)
-kubectl port-forward -n vault consul-0 :8500 > $temp_file 2>&1 &
-
-while [ 1 ]; do
-  echo "checking if kubectl port is open..."
-  grep 'Forwarding from' $temp_file > /dev/null 2>&1
-  if [ $? -eq 0 ]; then
-    output=$(grep 'Forwarding from' $temp_file)
-    echo "Success: $output"
-    break
-  fi
-  sleep 1
-done
-
-port=$(echo $output | awk '{print $3}' | awk -F":" '{print $2}')
-
 if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
-  response=$(curl --silent --show-error --fail --request PUT http://127.0.0.1:$port/v1/acl/bootstrap)
+  response=$(kubectl exec -it --tty -n vault consul-0 -- curl \
+               --silent --show-error --fail \
+               --request PUT \
+               http://127.0.0.1:8500/v1/acl/bootstrap)
   if [ $? -ne 0 ]; then
     echo "bootstrapping ACLs failed, check networking, or perhaps they have already been bootstrapped"
+    echo "rerun setting Management Token in CONSUL_BOOTSTRAP_ACL_TOKEN"
     echo $response
     exit 1
   fi
@@ -39,15 +21,17 @@ if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
   echo "************************* Secure this! *************************"
 else
   bootstrap_token=$CONSUL_BOOTSTRAP_ACL_TOKEN
+  echo "Using Management Token from env CONSUL_BOOTSTRAP_ACL_TOKEN"
 fi
 
 echo "writing anonymous ACL"
 ANON_POLICY=$(python3 -c "import json; policy_doc = open('policies/anonymous.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
-response=$(curl -s --show-error --fail \
+response=$(kubectl exec -it --tty -n vault consul-0 -- curl \
+             --silent --show-error --fail \
              --header "X-Consul-Token: $bootstrap_token" \
              --request PUT \
              --data '{"ID": "anonymous", "Rules": '"$ANON_POLICY"'}' \
-             http://127.0.0.1:$port/v1/acl/update)
+             http://127.0.0.1:8500/v1/acl/update)
 if [ $? -ne 0 ]; then
   echo "writing anonymous ACL failed, check networking"
   echo $response
@@ -55,46 +39,54 @@ if [ $? -ne 0 ]; then
 fi
 echo "wrote anonymous ACL"
 
-keyring=$(curl -s --show-error --fail -H"X-Consul-Token: $bootstrap_token" http://127.0.0.1:$port/v1/operator/keyring)
+keyring=$(kubectl exec -it --tty -n vault consul-0 -- curl \
+            --silent --show-error --fail \
+            --header "X-Consul-Token: $bootstrap_token" \
+            http://127.0.0.1:8500/v1/operator/keyring)
 
 echo $keyring | jq -r '.[].Keys|keys | .[]' | sort | uniq | grep "aaaaaaaaaaaaaaaaaaaaaQ==" > /dev/null 2>&1
 if [ $? -eq 0 ]; then
   echo "bootstrapping gossip/encryption key found, performing rotation"
   new_encrypt_key=$(consul keygen)
-  curl -s --show-error --fail \
+  kubectl exec -it --tty -n vault consul-0 -- curl \
+    --silent --show-error --fail \
     --header "X-Consul-Token: $bootstrap_token" \
     --request POST \
     --data '{"Key": "'"$new_encrypt_key"'"}' \
-    http://127.0.0.1:$port/v1/operator/keyring
+    http://127.0.0.1:8500/v1/operator/keyring
   echo "new key submitted to cluster, allowing to settle..."
   sleep 5
-  curl -s --show-error --fail \
+  kubectl exec -it --tty -n vault consul-0 -- curl \
+    --silent --show-error --fail \
     --header "X-Consul-Token: $bootstrap_token" \
     --request PUT \
     --data '{"Key": "'"$new_encrypt_key"'"}' \
-    http://127.0.0.1:$port/v1/operator/keyring
+    http://127.0.0.1:8500/v1/operator/keyring
   echo "new key promoted to primary, allowing to settle..."
   sleep 5
-  kubectl patch secret -n vault consul-gossip-key -p '{"data": {"key": "'"$(printf $new_encrypt_key | openssl base64)"'"}}'
+  kubectl patch secret -n vault consul-gossip-key -p '{"data": {"key": "'"$(printf $new_encrypt_key | base64 --decode)"'"}}'
   echo "Stored consul-gossip-key"
-  curl -s --show-error --fail \
+  kubectl exec -it --tty -n vault consul-0 -- curl \
+    --silent --show-error --fail \
     --header "X-Consul-Token: $bootstrap_token" \
     --request DELETE \
     --data '{"Key": "aaaaaaaaaaaaaaaaaaaaaQ=="}' \
-    http://127.0.0.1:$port/v1/operator/keyring
+    http://127.0.0.1:8500/v1/operator/keyring
   echo "bootstrapping gossip key removed!"
 fi
 
-stored_agent_token=$(kubectl -n vault get secret consul-agent-token -o json | jq -r '.data.token' | openssl base64 -d)
+stored_agent_token=$(kubectl -n vault get secret consul-agent-token -o json | jq -r '.data.token' | base64 --decode)
 
 if [ "$stored_agent_token" = "null" ]; then
   echo "No Agent Token found, creating a new one"
   AGENT_POLICY=$(python3 -c "import json; policy_doc = open('policies/agent.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
   response=$(
-    curl --silent --show-error --fail -XPUT \
+    kubectl exec -it --tty -n vault consul-0 -- curl \
+    --silent --show-error --fail \
+    --request PUT \
     --header "X-Consul-Token: $bootstrap_token" \
     --data '{"Name": "Agent Token", "Type": "client", "Rules": '"$AGENT_POLICY"'}' \
-    localhost:$port/v1/acl/create
+    localhost:8500/v1/acl/create
   )
   if [ $? -ne 0 ]; then
     echo "Creating Initial Agent Token failed, check networking"
@@ -124,11 +116,12 @@ stored_vault_token=$(kubectl -n vault get secret vault-consul-token -o json | jq
 if [ "$stored_vault_token" = "null" ]; then
   echo "No Vault Server Consul Token found, creating a new one"
   AGENT_POLICY=$(python3 -c "import json; policy_doc = open('policies/vault.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
-  response=$(
-    curl --silent --show-error --fail -XPUT \
+  response=$(kubectl exec -it --tty -n vault consul-0 -- curl \
+    --silent --show-error --fail \
+    --request PUT \
     --header "X-Consul-Token: $bootstrap_token" \
     --data '{"Name": "Vault Server Token", "Type": "client", "Rules": '"$AGENT_POLICY"'}' \
-    localhost:$port/v1/acl/create
+    localhost:8500/v1/acl/create
   )
   if [ $? -ne 0 ]; then
     echo "Creating Vault Server Consul Token failed, check networking"
