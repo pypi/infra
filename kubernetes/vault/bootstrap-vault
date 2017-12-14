@@ -1,0 +1,59 @@
+#!/bin/bash
+
+command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
+
+PODS=($(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[] | "\(.metadata.name) \(.status.podIP)"'))
+
+CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+if [ -z "$SECRET_SHARES" ]; then
+  SECRET_SHARES=1
+fi
+if [ -z "$SECRET_THRESHOLD" ]; then
+  SECRET_THRESHOLD=1
+fi
+
+echo "Connecting to ${PODS[0]} at ${PODS[1]}"
+
+vault_status=$(
+    kubectl exec -it --tty -n vault ${PODS[0]} -c consul -- curl \
+    --silent --show-error --fail \
+    --cacert $CA_CERT \
+    https://${PODS[1]}:8200/v1/sys/init
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to get Vault initialization status... check service status and networking?"
+  echo $response
+  exit 1
+fi
+
+if [ "$(echo $vault_status | jq -r '.initialized')" == "false" ]; then
+  echo "bootstrapping vault!"
+  init_response=$(
+    kubectl exec -it --tty -n vault ${PODS[0]} -c consul -- curl \
+    --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --data '{"secret_shares": '"$SECRET_SHARES"', "secret_threshold": '"$SECRET_THRESHOLD"'}' \
+    https://${PODS[1]}:8200/v1/sys/init
+  )
+  if [ $? -ne 0 ]; then
+    echo "Initializing Vault failed, check service status and networking?"
+    echo $init_response
+    exit 1
+  fi
+  root_token=$(echo $init_response | jq -r '.root_token')
+  unseal_keys=$(echo $init_response | jq -r '.keys[] | "- \(.)"')
+  echo "*************************** Secure these! **************************"
+  echo "****************** You will not see them again! ********************"
+  echo "Initial Root Token: $root_token"
+  echo "Unseal Key Shares (You must supply at least $SECRET_THRESHOLD to unseal:"
+  echo "$unseal_keys"
+  echo "****************** You will not see them again! ********************"
+  echo "*************************** Secure these! **************************"
+  echo "Vault successfully initialized"
+else
+  echo "Vault already initialized!"
+fi
+
+
+exit 0
