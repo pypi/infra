@@ -64,7 +64,7 @@ if [ $? -eq 0 ]; then
     http://127.0.0.1:8500/v1/operator/keyring
   echo "new key promoted to primary, allowing to settle..."
   sleep 5
-  kubectl patch secret -n vault consul-gossip-key -p '{"data": {"key": "'"$(printf $new_encrypt_key | base64 --decode)"'"}}'
+  kubectl patch secret -n vault consul-gossip-key -p '{"data": {"key": "'"$(printf $new_encrypt_key | base64)"'"}}'
   echo "Stored consul-gossip-key"
   kubectl exec -it --tty -n vault consul-0 -- curl \
     --silent --show-error --fail \
@@ -95,7 +95,7 @@ if [ "$stored_agent_token" = "null" ]; then
   fi
   agent_token=$(echo $response | jq -r '.ID')
   echo "Captured newly created Agent Token, storing in secret consul-agent-token"
-  kubectl patch secret -n vault consul-agent-token -p '{"data": {"token": "'"$(printf $agent_token | openssl base64)"'"}}'
+  kubectl patch secret -n vault consul-agent-token -p '{"data": {"token": "'"$(printf $agent_token | base64)"'"}}'
   echo "Stored consul-agent-token"
 else
   agent_token=$stored_agent_token
@@ -110,26 +110,3 @@ for i in 0 1 2; do
       --data '{"Token": "'"$agent_token"'"}' \
       http://127.0.0.1:8500/v1/agent/token/acl_agent_token
 done
-
-stored_vault_token=$(kubectl -n vault get secret vault-consul-token -o json | jq -r '.data.token' | openssl base64 -d)
-
-if [ "$stored_vault_token" = "null" ]; then
-  echo "No Vault Server Consul Token found, creating a new one"
-  AGENT_POLICY=$(python3 -c "import json; policy_doc = open('policies/vault.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
-  response=$(kubectl exec -it --tty -n vault consul-0 -- curl \
-    --silent --show-error --fail \
-    --request PUT \
-    --header "X-Consul-Token: $bootstrap_token" \
-    --data '{"Name": "Vault Server Token", "Type": "client", "Rules": '"$AGENT_POLICY"'}' \
-    localhost:8500/v1/acl/create
-  )
-  if [ $? -ne 0 ]; then
-    echo "Creating Vault Server Consul Token failed, check networking"
-    echo $response
-    exit 1
-  fi
-  token=$(echo $response | jq -r '.ID')
-  echo "Captured newly created Vault Server Consul Token, storing in secret vault-consul-token"
-  kubectl patch secret -n vault vault-consul-token -p '{"data": {"token": "'"$(printf $token | openssl base64)"'"}}'
-  echo "Stored vault-consul-token"
-fi
