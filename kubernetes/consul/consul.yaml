@@ -116,7 +116,7 @@ spec:
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
-        - name: secret-writer
+        - name: consul-secret-writer
           image: alpine:3.7
           env:
             - name: CONSUL_ACL_AGENT_TOKEN

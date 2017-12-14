@@ -46,15 +46,28 @@ data:
               "tls_key_file": "/etc/tls/key.pem"
             }
           }
-        ],
-        "storage": {
-          "consul": {
-            "address": "127.0.0.1:8500",
-            "scheme": "http",
-            "path": "vault"
-          }
+        ]
+      }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-scripts
+  namespace: vault
+data:
+  write-secrets.sh: |
+    cat > /vault/secrets/consul.json <<EOF
+    {
+      "storage": {
+        "consul": {
+          "address": "127.0.0.1:8500",
+          "scheme": "http",
+          "path": "vault/",
+          "token": "$CONSUL_ACL_TOKEN"
         }
       }
+    }
+    echo "Wrote /vault/secrets/consul.json"
 ---
 apiVersion: apps/v1beta1
 kind: Deployment
@@ -112,7 +125,7 @@ spec:
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
-        - name: secret-writer
+        - name: consul-secret-writer
           image: alpine:3.7
           env:
             - name: CONSUL_ACL_AGENT_TOKEN
@@ -131,6 +144,21 @@ spec:
             - name: consul-secrets
               mountPath: /etc/consul/secrets
             - name: consul-scripts
+              mountPath: /opt/scripts
+        - name: vault-secret-writer
+          image: alpine:3.7
+          env:
+            - name: CONSUL_ACL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-consul-token
+                  key: token
+          command: ['/bin/sh']
+          args: ['/opt/scripts/write-secrets.sh']
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /vault/secrets
+            - name: vault-scripts
               mountPath: /opt/scripts
       containers:
         - name: consul
@@ -178,7 +206,13 @@ spec:
         - name: vault-server
           image: vault:0.9.0
           imagePullPolicy: Always
-          command: ["vault", "server", "-config", "/vault/config/config.json"]
+          command: ["vault"]
+          args:
+          - "server"
+          - "-config"
+          - "/vault/config/config.json"
+          - "-config"
+          - "/vault/secrets/consul.json"
           env:
           - name: POD_IP
             valueFrom:
@@ -202,6 +236,8 @@ spec:
               mountPath: /etc/tls
             - name: vault-config
               mountPath: /vault/config/
+            - name: vault-secrets
+              mountPath: /vault/secrets/
           securityContext:
             readOnlyRootFilesystem: true
             capabilities:
@@ -224,9 +260,16 @@ spec:
         - name: consul-scripts
           configMap:
             name: consul-scripts
+        - name: vault-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
         - name: vault-config
           configMap:
             name: vault-server
+        - name: vault-scripts
+          configMap:
+            name: vault-scripts
 ---
 apiVersion: v1
 kind: Service
