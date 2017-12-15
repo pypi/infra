@@ -227,6 +227,11 @@ spec:
             value: https://$(POD_IP):8200
           ports:
             - containerPort: 443 
+          readinessProbe:
+            exec:
+              command: ['vault', 'status']
+            initialDelaySeconds: 5
+            initialDelaySeconds: 5
           resources:
             limits:
               memory: "50Mi"
