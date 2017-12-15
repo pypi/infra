@@ -49,26 +49,6 @@ data:
         ]
       }
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: vault-scripts
-  namespace: vault
-data:
-  write-secrets.sh: |
-    cat > /vault/secrets/consul.json <<EOF
-    {
-      "storage": {
-        "consul": {
-          "address": "127.0.0.1:8500",
-          "scheme": "http",
-          "path": "vault/",
-          "token": "$CONSUL_ACL_TOKEN"
-        }
-      }
-    }
-    echo "Wrote /vault/secrets/consul.json"
----
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -146,20 +126,34 @@ spec:
             - name: consul-scripts
               mountPath: /opt/scripts
         - name: vault-secret-writer
-          image: alpine:3.7
+          image: gcr.io/google-containers/startup-script:v1
           env:
             - name: CONSUL_ACL_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: vault-consul-token
                   key: token
-          command: ['/bin/sh']
-          args: ['/opt/scripts/write-secrets.sh']
+            - name: STARTUP_SCRIPT
+              value: |
+                #/bin/bash
+                cat > /vault/secrets/consul.json <<EOF
+                {
+                  "storage": {
+                    "consul": {
+                      "address": "127.0.0.1:8500",
+                      "scheme": "http",
+                      "path": "vault/",
+                      "token": "$CONSUL_ACL_TOKEN"
+                    }
+                  }
+                }
+                EOF
+                echo "Wrote /vault/secrets/consul.json"
+          command: ['/bin/bash']
+          args: ['-c', '$(STARTUP_SCRIPT)']
           volumeMounts:
             - name: vault-secrets
               mountPath: /vault/secrets
-            - name: vault-scripts
-              mountPath: /opt/scripts
       containers:
         - name: consul
           image: consul:1.0.1
