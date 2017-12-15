@@ -14,7 +14,7 @@ stored_vault_token=$(kubectl -n vault get secret vault-consul-token -o json | jq
 
 if [ "$stored_vault_token" = "null" ]; then
   echo "No Vault Server Consul Token found, creating a new one"
-  AGENT_POLICY=$(python3 -c "import json; policy_doc = open('policies/vault.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+  AGENT_POLICY=$(python3 -c "import json; policy_doc = open('consul-policies/vault.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
   response=$(kubectl exec -it --tty -n vault consul-0 -- curl \
     --silent --show-error --fail \
     --request PUT \
