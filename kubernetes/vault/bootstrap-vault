@@ -1,17 +1,31 @@
 #!/bin/bash
 
+function join_by { local IFS="$1"; shift; echo "$*"; }
+
 command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
 
 FIRST_POD=($(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
-echo ${FIRST_POD[*]}
-
 CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
+INIT_OPTS=""
 if [ -z "$SECRET_SHARES" ]; then
   SECRET_SHARES=1
 fi
+INIT_OPTS+=" -key-shares=$SECRET_SHARES"
 if [ -z "$SECRET_THRESHOLD" ]; then
   SECRET_THRESHOLD=1
+fi
+INIT_OPTS+=" -key-threshold=$SECRET_THRESHOLD"
+if [ ! -z "$UNSEAL_KEYBASE_USERS" ]; then
+  IFS=', ' read -r -a UNSEAL_KEYBASE_USERS <<< "$UNSEAL_KEYBASE_USERS"
+  KEYBASE_USERS=()
+  for user in "${UNSEAL_KEYBASE_USERS[@]}"; do
+    KEYBASE_USERS+=("keybase:$user")
+  done
+  INIT_OPTS+=" -pgp-keys=$(join_by , ${KEYBASE_USERS[*]})"
+fi
+if [ ! -z "$ROOT_TOKEN_KEYBASE_USER" ]; then
+  INIT_OPTS+=" -root-token-pgp-key=keybase:$ROOT_TOKEN_KEYBASE_USER"
 fi
 
 echo "Connecting to ${FIRST_POD[0]} at ${FIRST_POD[1]}"
@@ -30,31 +44,53 @@ fi
 
 if [ "$(echo $vault_status | jq -r '.initialized')" == "false" ]; then
   echo "bootstrapping vault!"
+  echo ""
   init_response=$(
-    kubectl exec -n vault ${FIRST_POD[0]} -c consul -- curl \
-    --silent --show-error --fail \
-    --cacert $CA_CERT \
-    --data '{"secret_shares": '"$SECRET_SHARES"', "secret_threshold": '"$SECRET_THRESHOLD"'}' \
-    https://${FIRST_POD[1]}:8200/v1/sys/init
+    kubectl exec -n vault ${FIRST_POD[0]} -c vault-server -- vault init $INIT_OPTS
   )
   if [ $? -ne 0 ]; then
     echo "Initializing Vault failed, check service status and networking?"
     echo $init_response
     exit 1
   fi
-  root_token=$(echo $init_response | jq -r '.root_token')
-  UNSEAL_KEYS_ARRAY=($(echo $init_response | jq -r '.keys[]'))
-  unseal_keys=$(echo $init_response | jq -r '.keys[] | "- \(.)"')
+  root_token=$(echo "$init_response" | grep '^Initial Root Token:' | awk '{print $NF}')
+  unseal_keys=($(echo "$init_response" | grep '^Unseal Key [0-9]:' | awk '{print $NF}'))
   echo "*************************** Secure these! **************************"
   echo "****************** You will not see them again! ********************"
-  echo "Initial Root Token: $root_token"
+  echo ""
+  if [ -z $ROOT_TOKEN_KEYBASE_USER ]; then
+    echo "Initial Root Token: $root_token"
+  else
+    echo "Initial Root Token:"
+    echo " - keybase:$ROOT_TOKEN_KEYBASE_USER"
+    echo "    $root_token"
+  fi
+  echo ""
   echo "Unseal Key Shares (You must supply at least $SECRET_THRESHOLD to unseal:"
-  echo "$unseal_keys"
+  if [ ${#UNSEAL_KEYBASE_USERS[*]} -eq 0 ]; then
+    printf " - %s\n" "${unseal_keys[@]}"
+  else
+    for (( c=0; c<${#UNSEAL_KEYBASE_USERS[*]}; c++ )); do
+      echo " - ${KEYBASE_USERS[c]}"
+      echo "    ${unseal_keys[c]}"
+    done
+  fi
+  echo ""
   echo "****************** You will not see them again! ********************"
   echo "*************************** Secure these! **************************"
-  echo "Vault successfully initialized"
+  echo ""
+  echo "Vault successfully initialized!"
 else
   echo "Vault already initialized!"
+  exit 0
+fi
+
+if [ ${#UNSEAL_KEYBASE_USERS[*]} -gt 0 ]; then
+  echo "Unable to automatically unseal vault instances as keys were encrypted"
+  echo "Get $SECRET_THRESHOLD of the following users together to decrypt their shares and unseal:"
+  printf " - %s\n" "${KEYBASE_USERS[@]}"
+  echo ""
+  exit 0
 fi
 
 # Keys are in memory... might as well unseal!
@@ -80,7 +116,7 @@ while read POD_NAME POD_IP ; do
           --silent --show-error --fail \
           --cacert $CA_CERT \
           --request PUT \
-          --data '{"key": "'"${UNSEAL_KEYS_ARRAY[$c]}"'"}' \
+          --data '{"key": "'"${unseal_keys[$c]}"'"}' \
           https://${POD_IP}:8200/v1/sys/unseal)
         if [ $? -ne 0 ]; then
           echo "Unseal for $POD_NAME failed, check service status and networking?"
