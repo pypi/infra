@@ -218,7 +218,7 @@ spec:
           - name: VAULT_CACERT
             value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           - name: VAULT_CLUSTER_ADDR
-            value: https://$(POD_IP):8200
+            value: https://$(POD_IP):8201
           ports:
             - containerPort: 443 
           readinessProbe:
