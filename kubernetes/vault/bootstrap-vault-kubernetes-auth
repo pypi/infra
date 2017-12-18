@@ -144,19 +144,105 @@ if [ $? -ne 0 ]; then
 fi
 echo "Successfully created binding for vault/vault-enrollment-controller ServiceAccount"
 
-exit 0
+mounts_response=$(
+  kubectl exec -n vault $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/sys/mounts
+)
 
-#kubectl exec -it -n vault vault-server-9f65fbb95-4xb2t -c vault-server -- \
-#  sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault mount consul"
-#kubectl exec -it -n vault vault-server-9f65fbb95-4xb2t -c vault-server -- \
-#  sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write consul/config/access \
-#    address=127.0.0.1:8500 \
-#    token=$CONSUL_MANAGEMENT_TOKEN"
-#
-#POLICY='key "" { policy = "read" }'
-#echo $POLICY | base64 | kubectl exec -it -n vault vault-server-9f65fbb95-4xb2t -c vault-server -- \
-#  sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write consul/roles/readonly \
-#    policy=- \
-#    lease=30s \
-#    token_type=client"
-#    
+mounts=($(echo "$mounts_response" | jq -r '.data | values[].type'))
+if [[ " ${mounts[@]} " =~ " consul " ]]; then
+  echo "Consul Secrets mount already mounted!"
+else
+  echo "Enabling Consul Secrets mount"
+  mount_response=$(
+    kubectl exec -n vault $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      https://$POD_IP:8200/v1/sys/mounts/consul \
+      --data '
+      {
+        "type": "consul",
+        "description": "automate consul tokens for kubernetes pods via ServiceAccount JWT",
+        "config": {
+          "default_lease_ttl": 3600,
+          "max_lease_ttl": 86400
+        }
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to enable Consul Secrets mount"
+    echo $mount_response
+    exit 1
+  fi
+  echo "Generating Consul Management Token for Vault"
+  token_response=$(
+    kubectl exec -n vault $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --header "X-Consul-Token: $CONSUL_MANAGEMENT_TOKEN" \
+      --request PUT \
+      http://127.0.0.1:8500/v1/acl/create \
+      --data '
+      {
+        "Name": "Vault Consul Backend Management Token",
+        "Type": "management"
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to generate Consul Management Token for Vault"
+    echo $token_response
+    exit 1
+  fi
+  VAULT_CONSUL_MANAGEMENT_TOKEN=$(echo $token_response | jq -r '.ID')
+  echo "Configuring Consul Secret Backend for Vault"
+  configure_response=$(
+    kubectl exec -n vault $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      https://$POD_IP:8200/v1/consul/config/access \
+      --data '
+      {
+        "address": "127.0.0.1:8500",
+        "scheme": "http",
+        "token": "'"$VAULT_CONSUL_MANAGEMENT_TOKEN"'"
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to configure Consul Secret Backend for Vault"
+    echo $configure_response
+    exit 1
+  fi
+fi
+
+echo "Configuring readonly role for Consul Secret Backend"
+READ_ONLY_POLICY=$(cat consul-policies/readonly.hcl | base64)
+role_create_response=$(
+  kubectl exec -n vault $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/consul/roles/readonly \
+    --data '
+    {
+      "token_type": "client",
+      "lease": "1h",
+      "policy": "'"$READ_ONLY_POLICY"'"
+    }
+    '
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to configure readonly role for Consul Secret Backend"
+  echo $role_create_response
+  exit 1
+fi
+
+exit 0
