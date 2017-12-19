@@ -1,5 +1,6 @@
 import signal
 import sys
+import json
 
 import kubernetes
 from kubernetes.client.rest import ApiException
@@ -7,6 +8,8 @@ from kubernetes.client.rest import ApiException
 import click
 
 import hvac
+
+import requests
 
 
 def signal_handler(signal, frame):
@@ -85,7 +88,12 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
     authorization_api = kubernetes.client.AuthorizationV1Api(kubernetes.client.ApiClient(configuration))
 
     if vault_token is None:
-        pass  # Login via vault/v1/auth/kubernetes/login with JWT and role
+        with open('/var/run/secrets/kubernetes.io/serviceaccount/token', 'rU') as f:
+            jwt = f.read()
+        token = requests.post(f"{vault_addr}/v1/auth/kubernetes/login",
+                              data=json.dumps({'jwt': jwt, 'role': 'vault-enrollment-controller'}),
+                              verify='/var/run/secrets/kubernetes.io/serviceaccount/ca.crt')
+        vault_token = token.json()['auth']['client_token']
 
     if vault_token is None:
         click.echo("No Vault Token available")

@@ -16,6 +16,9 @@ spec:
       containers:
         - name: vault-enrollment-controller
           image: gcr.io/the-psf/vault-enrollment-controller:v1.0.0a1
+          args:
+            - "--vault-addr=https://vault-server.vault.svc.cluster.local"
+            - "--vault-cacert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
           resources:
             limits:
               memory: "50Mi"
