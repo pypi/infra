@@ -1,0 +1,24 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  namespace: vault
+  name: vault-enrollment-controller
+  labels:
+    app: vault-enrollment-controller
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: vault-enrollment-controller
+    spec:
+      serviceAccountName: vault-enrollment-controller
+      containers:
+        - name: vault-enrollment-controller
+          image: gcr.io/the-psf/vault-enrollment-controller:v1.0.0a1
+          resources:
+            limits:
+              memory: "50Mi"
+              cpu: "100m"
+          securityContext:
+            readOnlyRootFilesystem: true
