@@ -48,6 +48,13 @@ def create_policy(vault_api, namespace, name):
     vault_api.set_policy(name=f'{namespace}-{name}', rules=policy)
 
 
+def delete_policy(vault_api, namespace, name):
+    policy = vault_api.get_policy(name=f'{namespace}-{name}')
+    click.echo(f"Policy {namespace}-{name} before delete:")
+    click.echo(policy)
+    vault_api.delete_policy(name=f'{namespace}-{name}')
+
+
 def role_exists(vault_api, namespace, name):
     result = vault_api.read(f"auth/kubernetes/role/{namespace}-{name}")
     if result is None:
@@ -60,6 +67,13 @@ def create_role(vault_api, namespace, name):
                     bound_service_account_names=[name],
                     bound_service_account_namespaces=[namespace],
                     policies=[f"{namespace}-{name}"])
+
+
+def delete_role(vault_api, namespace, name):
+    role = vault_api.read(f"auth/kubernetes/role/{namespace}-{name}")
+    click.echo(f"Role {namespace}-{name} before delete:")
+    click.echo(role)
+    vault_api.delete(f"auth/kubernetes/role/{namespace}-{name}")
 
 
 @click.command()
@@ -114,25 +128,42 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
                                   resource_version=latest_resource_version,
                                   timeout_seconds=10):
                 if event['type'] == "DELETED":
+                    item = event['object']
                     if event['object'].metadata.uid in deleted:
                         continue
+
+                    log_event('Handling Delete', event)
+
+                    if role_exists(vault_api, item.metadata.namespace, item.metadata.name):
+                        click.echo(f"Deleting Vault Kubernetes auth role {item.metadata.namespace}-{item.metadata.name}")
+                        delete_role(vault_api, item.metadata.namespace, item.metadata.name)
                     else:
-                        # Do Delete here
-                        log_event('Handling Delete', event)
-                        deleted.add(event['object'].metadata.uid)
+                        click.echo(f"Vault Kubernetes auth role {item.metadata.namespace}-{item.metadata.name} already deleted")
+
+                    if policy_exists(vault_api, item.metadata.namespace, item.metadata.name):
+                        click.echo(f"Deleting Vault policy {item.metadata.namespace}-{item.metadata.name}")
+                        delete_policy(vault_api, item.metadata.namespace, item.metadata.name)
+                    else:
+                        click.echo(f"Vault Policy {item.metadata.namespace}-{item.metadata.name} already deleted")
+
+                    deleted.add(event['object'].metadata.uid)
 
                 if event['type'] == "ADDED":
                     item = event['object']
                     if item.metadata.labels and serviceaccount_label not in item.metadata.labels:
                         log_event('Skipping Create', event)
                         continue
+
                     log_event('Handling Create', event)
+
                     deleted.discard(item.metadata.uid)
+
                     if policy_exists(vault_api, item.metadata.namespace, item.metadata.name):
                         click.echo(f"Vault policy {item.metadata.namespace}-{item.metadata.name} exists")
                     else:
                         click.echo(f"Creating Vault policy {item.metadata.namespace}-{item.metadata.name}")
                         create_policy(vault_api, item.metadata.namespace, item.metadata.name)
+
                     if role_exists(vault_api, item.metadata.namespace, item.metadata.name):
                         click.echo(f"Vault Kubernetes auth role {item.metadata.namespace}-{item.metadata.name} exists")
                     else:
