@@ -2,12 +2,12 @@
 
 command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
 
-if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
-  echo "rerun setting a Consul Management Token in CONSUL_BOOTSTRAP_ACL_TOKEN"
+if [ -z "$CONSUL_MANAGEMENT_TOKEN" ]; then
+  echo "rerun setting a Consul Management Token in CONSUL_MANAGEMENT_TOKEN"
   exit 1
 else
-  bootstrap_token=$CONSUL_BOOTSTRAP_ACL_TOKEN
-  echo "Using Management Token from env CONSUL_BOOTSTRAP_ACL_TOKEN"
+  bootstrap_token=$CONSUL_MANAGEMENT_TOKEN
+  echo "Using Management Token from env CONSUL_MANAGEMENT_TOKEN"
 fi
 
 stored_vault_token=$(kubectl -n vault get secret vault-consul-token -o json | jq -r '.data.token' | openssl base64 -d)

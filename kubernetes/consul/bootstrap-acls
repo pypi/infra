@@ -3,14 +3,14 @@
 command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
 command -v consul > /dev/null 2>&1 || (echo "you must have 'consul' installed" && exit 1)
 
-if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
+if [ -z "$CONSUL_MANAGEMENT_TOKEN" ]; then
   response=$(kubectl exec -it --tty -n vault consul-0 -- curl \
                --silent --show-error --fail \
                --request PUT \
                http://127.0.0.1:8500/v1/acl/bootstrap)
   if [ $? -ne 0 ]; then
     echo "bootstrapping ACLs failed, check networking, or perhaps they have already been bootstrapped"
-    echo "rerun setting Management Token in CONSUL_BOOTSTRAP_ACL_TOKEN"
+    echo "rerun setting Management Token in CONSUL_MANAGEMENT_TOKEN"
     echo $response
     exit 1
   fi
@@ -20,8 +20,8 @@ if [ -z "$CONSUL_BOOTSTRAP_ACL_TOKEN" ]; then
   echo "Consul ACL Bootstrap Token: $bootstrap_token"
   echo "************************* Secure this! *************************"
 else
-  bootstrap_token=$CONSUL_BOOTSTRAP_ACL_TOKEN
-  echo "Using Management Token from env CONSUL_BOOTSTRAP_ACL_TOKEN"
+  bootstrap_token=$CONSUL_MANAGEMENT_TOKEN
+  echo "Using Management Token from env CONSUL_MANAGEMENT_TOKEN"
 fi
 
 echo "writing anonymous ACL"
