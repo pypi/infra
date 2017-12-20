@@ -109,7 +109,7 @@ create_policy_response=$(
     --cacert $CA_CERT \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
-    https://$POD_IP:8200/v1/sys/policy/vault-enrollment-controller \
+    https://$POD_IP:8200/v1/sys/policy/vault-vault-enrollment-controller \
     --data '{"rules": '"$POLICY"'}'
 )
 if [ $? -ne 0 ]; then
@@ -126,12 +126,12 @@ create_role_response=$(
     --cacert $CA_CERT \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
-    https://$POD_IP:8200/v1/auth/kubernetes/role/vault-enrollment-controller \
+    https://$POD_IP:8200/v1/auth/kubernetes/role/vault-vault-enrollment-controller \
     --data '
     {
       "bound_service_account_names": ["vault-enrollment-controller"],
       "bound_service_account_namespaces": ["vault"],
-      "policies": ["vault-enrollment-controller"],
+      "policies": ["vault-vault-enrollment-controller"],
       "ttl": "3600",
       "max_ttl": "86400"
     }

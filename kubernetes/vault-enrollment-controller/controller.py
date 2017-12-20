@@ -105,7 +105,7 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
         with open('/var/run/secrets/kubernetes.io/serviceaccount/token', 'rU') as f:
             jwt = f.read()
         token = requests.post(f"{vault_addr}/v1/auth/kubernetes/login",
-                              data=json.dumps({'jwt': jwt, 'role': 'vault-enrollment-controller'}),
+                              data=json.dumps({'jwt': jwt, 'role': 'vault-vault-enrollment-controller'}),
                               verify='/var/run/secrets/kubernetes.io/serviceaccount/ca.crt')
         vault_token = token.json()['auth']['client_token']
 
