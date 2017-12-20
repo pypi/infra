@@ -62,6 +62,23 @@ spec:
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
+        - name: vault-token-requestor
+          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "--namespace=$(NAMESPACE)"
+            - "--vault-kubernetes-auth-role=goldfish"
+            - "--vault-kubernetes-auth-addr=https://vault-server.vault.svc.cluster.local"
+            - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
+            - "--wrap"
+            - "--unwrap"
+          volumeMounts:
+            - name: vault-token
+              mountPath: /var/run/secrets/vault
       containers:
         - name: goldfish
           image: gcr.io/the-psf/goldfish:v1.0.0a1
@@ -77,6 +94,7 @@ spec:
           command: ['goldfish']
           args:
             - "-config=/etc/goldfish/config.hcl"
+            - "-nomad-token-file=/var/run/secrets/vault/vault-token"
           ports:
             - containerPort: 8000
               name: http
@@ -85,6 +103,8 @@ spec:
               mountPath: /etc/tls
             - name: goldfish-config
               mountPath: /etc/goldfish
+            - name: vault-token
+              mountPath: /var/run/secrets/vault
           resources:
             limits:
               memory: "50Mi"
@@ -96,6 +116,10 @@ spec:
               - IPC_LOCK
       volumes:
         - name: tls
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: vault-token
           emptyDir:
             medium: "Memory"
             sizeLimit: "1M"

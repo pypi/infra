@@ -33,16 +33,13 @@ if ! [[ " ${groups[@]} " =~ " root " ]]; then
 fi
 
 POLICY=$(python3 -c "import json; policy_doc = open('vault-policies/goldfish.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
-
-kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault auth-enable approle"
-
 create_policy_response=$(
   kubectl exec -n vault $POD_NAME -c consul -- \
     curl --silent --show-error --fail \
     --cacert $CA_CERT \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
-    https://$POD_IP:8200/v1/sys/policy/goldfish \
+    https://$POD_IP:8200/v1/sys/policy/vault-goldfish \
     --data '{"rules": '"$POLICY"'}'
 )
 if [ $? -ne 0 ]; then
@@ -51,11 +48,5 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 echo "Successfully created vault policy for goldfish"
-
-kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write auth/approle/role/goldfish role_name=goldfish policies=default,goldfish secret_id_num_uses=1 secret_id_ttl=5m period=24h token_ttl=0 token_max_ttl=0"
-kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write auth/approle/role/goldfish/role-id role_id=goldfish"
-kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write secret/goldfish DefaultSecretPath='secret/' BulletinPath='secret/goldfish/bulletins/'"
-
-kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write -f -wrap-ttl=5m auth/approle/role/goldfish/secret-id"
 
 exit 0
