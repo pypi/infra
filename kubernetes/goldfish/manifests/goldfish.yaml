@@ -16,8 +16,8 @@ data:
           tls_skip_verify = 1
           runtime_config  = "secret/goldfish"
       
-          approle_login   = "auth/approle/login"
-          approle_id      = "goldfish"
+          approle_login   = "null"
+          approle_id      = "null"
       }
       disable_mlock = 1
 ---

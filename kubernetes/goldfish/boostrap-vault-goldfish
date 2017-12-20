@@ -49,4 +49,18 @@ if [ $? -ne 0 ]; then
 fi
 echo "Successfully created vault policy for goldfish"
 
+echo "writing initial configuration for goldfish"
+kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+  sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
+  vault write secret/goldfish \
+  DefaultSecretPath='secret/' \
+  BulletinPath='secret/goldfish/bulletins/'"
+
+kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+  sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
+  vault write secret/goldfish/bulletins/initial \
+  type=is-success \
+  title='Goldfish is all setup!' \
+  message='Messages can be created here by setting a title, message, and optionally a type in secret/goldfish/bulletins/<key>'"
+
 exit 0
