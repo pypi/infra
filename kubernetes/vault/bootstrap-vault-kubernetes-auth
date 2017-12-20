@@ -89,8 +89,7 @@ create_role_response=$(
       "bound_service_account_names": ["default"],
       "bound_service_account_namespaces": ["default"],
       "policies": ["default"],
-      "ttl": "3600",
-      "max_ttl": "86400"
+      "period": "3600"
     }
     '
 )
@@ -132,8 +131,7 @@ create_role_response=$(
       "bound_service_account_names": ["vault-enrollment-controller"],
       "bound_service_account_namespaces": ["vault"],
       "policies": ["vault-vault-enrollment-controller"],
-      "ttl": "3600",
-      "max_ttl": "86400"
+      "period": "3600",
     }
     '
 )
