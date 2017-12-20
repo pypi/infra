@@ -1,0 +1,61 @@
+#!/bin/bash
+
+command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
+
+FIRST_POD=($(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
+CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+POD_NAME=${FIRST_POD[0]}
+POD_IP=${FIRST_POD[1]}
+
+if [ -z $VAULT_TOKEN ]; then
+  echo "You must supply VAULT_TOKEN env var with root privileges"
+fi
+
+lookup_self_response=$(
+  kubectl exec -n vault $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/auth/token/lookup-self
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to get https://$POD_IP:8200/v1/auth/token/lookup-self... check service status and networking?"
+  echo $lookup_self_response
+  exit 1
+fi
+
+groups=($(echo "$lookup_self_response" | jq -r '.data.policies[]'))
+if ! [[ " ${groups[@]} " =~ " root " ]]; then
+  echo "You must supply VAULT_TOKEN env var with root privileges"
+  echo "Supplied VAULT_TOKEN does not have root policy" 
+  exit 1
+fi
+
+POLICY=$(python3 -c "import json; policy_doc = open('vault-policies/goldfish.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+
+kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault auth-enable approle"
+
+create_policy_response=$(
+  kubectl exec -n vault $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    https://$POD_IP:8200/v1/sys/policy/goldfish \
+    --data '{"rules": '"$POLICY"'}'
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to create goldfish Vault Policy"
+  echo $create_policy_response
+  exit 1
+fi
+echo "Successfully created vault policy for goldfish"
+
+kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write auth/approle/role/goldfish role_name=goldfish policies=default,goldfish secret_id_num_uses=1 secret_id_ttl=5m period=24h token_ttl=0 token_max_ttl=0"
+kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write auth/approle/role/goldfish/role-id role_id=goldfish"
+kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write secret/goldfish DefaultSecretPath='secret/' BulletinPath='secret/goldfish/bulletins/'"
+
+kubectl exec -it -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write -f -wrap-ttl=5m auth/approle/role/goldfish/secret-id"
+
+exit 0

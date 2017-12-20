@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: goldfish
+  namespace: vault
+data:
+  config.hcl: |
+      listener "tcp" {
+          address = "0.0.0.0:8000"
+          tls_disable = 0
+          tls_cert_file = "/etc/tls/cert.pem"
+          tls_key_file = "/etc/tls/key.pem"
+      }
+      vault {
+          address         = "https://vault-server.vault.svc.cluster.local"
+          tls_skip_verify = 1
+          runtime_config  = "secret/goldfish"
+      
+          approle_login   = "auth/approle/login"
+          approle_id      = "goldfish"
+      }
+      disable_mlock = 1
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  namespace: vault
+  name: goldfish
+  labels:
+    app: goldfish
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: goldfish
+    spec:
+      serviceAccountName: goldfish
+      initContainers:
+        - name: certificate-requestor
+          image: gcr.io/the-psf/certificate-requestor:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          args:
+            - "--additional-dnsnames=goldfish,goldfish.$(NAMESPACE),goldfish.$(NAMESPACE).svc.cluster.local"
+            - "--cert-dir=/etc/tls"
+            - "--namespace=$(NAMESPACE)"
+            - "--pod-ip=$(POD_IP)"
+            - "--pod-name=$(POD_NAME)"
+            - "--service-names=goldfish"
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+      containers:
+        - name: goldfish
+          image: gcr.io/the-psf/goldfish:v1.0.0a1
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command: ['goldfish']
+          args:
+            - "-config=/etc/goldfish/config.hcl"
+          ports:
+            - containerPort: 8000
+              name: http
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+            - name: goldfish-config
+              mountPath: /etc/goldfish
+          resources:
+            limits:
+              memory: "50Mi"
+              cpu: "100m"
+          securityContext:
+            readOnlyRootFilesystem: true
+            capabilities:
+              add:
+              - IPC_LOCK
+      volumes:
+        - name: tls
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: goldfish-config
+          configMap:
+            name: goldfish
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: goldfish
+  name: goldfish
+  namespace: vault
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 8000
+  selector:
+    app: goldfish
+  sessionAffinity: None
+  type: NodePort
+status:
+  loadBalancer: {}
