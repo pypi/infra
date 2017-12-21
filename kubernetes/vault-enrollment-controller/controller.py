@@ -67,9 +67,9 @@ def create_role(vault_api, namespace, name):
                     bound_service_account_names=[name],
                     bound_service_account_namespaces=[namespace],
                     policies=[f"{namespace}-{name}"],
-                    period=3600,
-                    ttl=3600,
-                    max_ttl=3600)
+                    period=21600,
+                    ttl=21600,
+                    max_ttl=21600)
 
 
 def delete_role(vault_api, namespace, name):
