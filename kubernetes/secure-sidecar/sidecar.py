@@ -32,7 +32,11 @@ def vault_kubernetes_auth_login(ca_file, vault_addr, vault_backend, jwt, vault_r
     return token.json()
 
 
-@click.command()
+@click.group()
+def cli():
+    pass
+
+@cli.command('kube_login')
 @click.option('--namespace', default="default", help="namespace as defined by pod.metadata.namespace")
 @click.option('--vault-kubernetes-auth-role', default=None, help="Vault Role to request for Kubernetes Auth.")
 @click.option('--vault-kubernetes-auth-addr', default="https://vault-server.vault.svc.cluster.local", help="Vault Address to request for Kubernetes Auth.")
@@ -40,7 +44,7 @@ def vault_kubernetes_auth_login(ca_file, vault_addr, vault_backend, jwt, vault_r
 @click.option('--vault-kubernetes-auth-token-path', default="/var/run/secrets/vault/", help="Directory to store vault-token file in", type=click.Path(exists=True))
 @click.option('--wrap/--no-wrap', default=False, help="Use Vault Response Wrapping when requesting tokens, etc")
 @click.option('--unwrap/--no-unwrap', default=False, help="Unwrap Vault Token response, may not be desirable for some apps")
-def main(namespace, vault_kubernetes_auth_role, vault_kubernetes_auth_addr, vault_kubernetes_auth_backend, vault_kubernetes_auth_token_path, wrap, unwrap):
+def kube_login(namespace, vault_kubernetes_auth_role, vault_kubernetes_auth_addr, vault_kubernetes_auth_backend, vault_kubernetes_auth_token_path, wrap, unwrap):
     click.echo(f'namespace: {namespace}')
     click.echo(f'vault_kubernetes_auth_role: {vault_kubernetes_auth_role}')
     click.echo(f'vault_kubernetes_auth_addr: {vault_kubernetes_auth_addr}')
@@ -64,7 +68,6 @@ def main(namespace, vault_kubernetes_auth_role, vault_kubernetes_auth_addr, vaul
             wrap,
             unwrap,
         )
-        click.echo(token)
         if (wrap and unwrap) or not wrap:
             token_type = 'vault-token'
             token_path = os.path.join(vault_kubernetes_auth_token_path, 'vault-token')
@@ -78,4 +81,4 @@ def main(namespace, vault_kubernetes_auth_role, vault_kubernetes_auth_addr, vaul
             f.write(token_contents)
 
 if __name__ == '__main__':
-    main()
+    cli()

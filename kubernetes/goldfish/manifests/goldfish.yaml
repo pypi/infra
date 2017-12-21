@@ -70,6 +70,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
           args:
+            - "kube_login"
             - "--namespace=$(NAMESPACE)"
             - "--vault-kubernetes-auth-role=goldfish"
             - "--vault-kubernetes-auth-addr=https://vault-server.vault.svc.cluster.local"
