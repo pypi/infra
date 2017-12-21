@@ -109,6 +109,10 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
                               verify='/var/run/secrets/kubernetes.io/serviceaccount/ca.crt')
         vault_token = token.json()['auth']['client_token']
 
+    if vault_token.startswith('@'):
+        with open(vault_token.lstrip('@'), 'rU') as f:
+            vault_token = f.read()
+
     if vault_token is None:
         click.echo("No Vault Token available")
         raise click.Abort()

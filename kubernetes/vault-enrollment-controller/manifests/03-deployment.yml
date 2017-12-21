@@ -13,15 +13,57 @@ spec:
         app: vault-enrollment-controller
     spec:
       serviceAccountName: vault-enrollment-controller
+      initContainers:
+        - name: vault-token-requestor
+          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "kube_login"
+            - "--namespace=$(NAMESPACE)"
+            - "--vault-kubernetes-auth-role=vault-enrollment-controller"
+            - "--vault-kubernetes-auth-addr=https://vault-server.vault.svc.cluster.local"
+            - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
+            - "--wrap"
+          volumeMounts:
+            - name: vault-token
+              mountPath: /var/run/secrets/vault
       containers:
+        - name: secure-sidecar
+          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "fetch_and_renew"
+            - "--token-file=/var/run/secrets/vault/wrapped-vault-token"
+            - "--write-token-file=/var/run/secrets/vault/vault-token"
+            - "--unwrap"
+          volumeMounts:
+            - name: vault-token
+              mountPath: /var/run/secrets/vault
         - name: vault-enrollment-controller
           image: gcr.io/the-psf/vault-enrollment-controller:v1.0.0a1
           args:
+            - "--vault-token=@/var/run/secrets/vault/vault-token"
             - "--vault-addr=https://vault-server.vault.svc.cluster.local"
             - "--vault-cacert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+          volumeMounts:
+            - name: vault-token
+              mountPath: /var/run/secrets/vault
           resources:
             limits:
               memory: "50Mi"
               cpu: "100m"
           securityContext:
             readOnlyRootFilesystem: true
+      volumes:
+        - name: vault-token
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
