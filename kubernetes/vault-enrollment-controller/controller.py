@@ -66,7 +66,10 @@ def create_role(vault_api, namespace, name):
     vault_api.write(f"auth/kubernetes/role/{namespace}-{name}",
                     bound_service_account_names=[name],
                     bound_service_account_namespaces=[namespace],
-                    policies=[f"{namespace}-{name}"])
+                    policies=[f"{namespace}-{name}"],
+                    period=3600,
+                    ttl=3600,
+                    max_ttl=3600)
 
 
 def delete_role(vault_api, namespace, name):
