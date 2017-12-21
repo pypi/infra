@@ -14,7 +14,8 @@ data:
       vault {
           address         = "https://vault-server.vault.svc.cluster.local"
           tls_skip_verify = 1
-          runtime_config  = "secret/goldfish"
+
+          runtime_config  = "goldfish-secret/runtime-config"
       
           approle_login   = "null"
           approle_id      = "null"
