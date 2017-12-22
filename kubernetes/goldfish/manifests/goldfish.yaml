@@ -144,6 +144,6 @@ spec:
   selector:
     app: goldfish
   sessionAffinity: None
-  type: NodePort
+  type: ClusterIP
 status:
   loadBalancer: {}
