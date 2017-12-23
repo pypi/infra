@@ -107,12 +107,12 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           args:
-            - "--additional-dnsnames=consul-internal,consul-internal.vault,consul-internal.vault.svc.cluster.local,consul,consul.vault,consul.vault.svc.cluster.local,server.us-east1.cluster.local"
+            - "--additional-dnsnames=server.us-east1.cluster.local"
             - "--cert-dir=/etc/tls"
             - "--namespace=$(NAMESPACE)"
             - "--pod-ip=$(POD_IP)"
             - "--pod-name=$(POD_NAME)"
-            - "--service-names=consul-internal"
+            - "--service-names=consul,consul-internal"
           volumeMounts:
             - name: tls
               mountPath: /etc/tls

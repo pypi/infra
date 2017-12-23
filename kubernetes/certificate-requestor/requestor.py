@@ -44,15 +44,29 @@ def generate_csr(common_name, dnsnames, ips, keysize):
 
 
 def service_dns(service_name, namespace, domain):
-    return x509.DNSName(f'{service_name}.{namespace}.svc.{domain}')
+    return [
+        x509.DNSName(f'{service_name}.{namespace}.svc.{domain}'),
+        x509.DNSName(f'{service_name}.{namespace}.svc'),
+        x509.DNSName(f'{service_name}.{namespace}'),
+        x509.DNSName(f'{service_name}'),
+    ]
 
 
 def pod_dns(pod_ip, namespace, domain):
-    return x509.DNSName(f'{pod_ip.replace(".", "-")}.{namespace}.pod.{domain}')
+    return [
+        x509.DNSName(f'{pod_ip.replace(".", "-")}.{namespace}.pod.{domain}'),
+        x509.DNSName(f'{pod_ip.replace(".", "-")}.{namespace}.pod'),
+    ]
 
 
 def headless_dns(hostname, subdomain, namespace, domain):
-    return x509.DNSName(f'{hostname}.{subdomain}.{namespace}.svc.{domain}')
+    return [
+        x509.DNSName(f'{hostname}.{subdomain}.{namespace}.svc.{domain}'),
+        x509.DNSName(f'{hostname}.{subdomain}.{namespace}.svc'),
+        x509.DNSName(f'{hostname}.{subdomain}.{namespace}'),
+        x509.DNSName(f'{hostname}.{subdomain}'),
+        x509.DNSName(f'{hostname}'),
+    ]
 
 
 @click.command()
@@ -70,12 +84,14 @@ def headless_dns(hostname, subdomain, namespace, domain):
 def main(cert_dir, hostname, subdomain, namespace, cluster_domain, pod_name, pod_ip, additional_dnsnames, service_names, service_ips, keysize):
     csr_name = f'{namespace}-{pod_name}-{int(time.time())}'
 
-    dnsnames = [pod_dns(pod_ip, namespace, cluster_domain)]
+    dnsnames = pod_dns(pod_ip, namespace, cluster_domain)
     dnsnames += [x509.DNSName(x) for x in additional_dnsnames.split(',') if x]
-    dnsnames += [service_dns(x, namespace, cluster_domain) for x in service_names.split(',') if x]
+    for service_name in service_names.split(','):
+        if service_name:
+            dnsnames += service_dns(service_name, namespace, cluster_domain)
 
     if hostname and subdomain:
-        dnsnames += [headless_dns(hostname, subdomain, namespace, cluster_domain)]
+        dnsnames += headless_dns(hostname, subdomain, namespace, cluster_domain)
 
     ips = [x509.IPAddress(ip_address(pod_ip))]
     ips += [x509.IPAddress(ip_address(x)) for x in service_ips.split(',') if x]
@@ -84,8 +100,8 @@ def main(cert_dir, hostname, subdomain, namespace, cluster_domain, pod_name, pod
     key_pem, csr_pem = generate_csr(common_name, dnsnames, ips, keysize)
     click.echo('Generated Key')
     click.echo('Generated CSR for:')
-    click.echo('DNSNames:\n%s' % ("\n".join([" - " + str(d) for d in dnsnames])))
-    click.echo('IPs:\n%s' % ("\n".join([" - " + str(i) for i in ips])))
+    click.echo('DNSNames:\n%s' % ("\n".join([" - " + str(d) for d in set(dnsnames)])))
+    click.echo('IPs:\n%s' % ("\n".join([" - " + str(i) for i in set(ips)])))
 
     with open(os.path.join(cert_dir, 'key.pem'), 'wb') as f:
         f.write(key_pem)

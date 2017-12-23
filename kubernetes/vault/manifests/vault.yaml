@@ -96,7 +96,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           args:
-            - "--additional-dnsnames=vault-server,vault-server.$(NAMESPACE),vault-server.$(NAMESPACE).svc.cluster.local"
+            - "--additional-dnsnames="
             - "--cert-dir=/etc/tls"
             - "--namespace=$(NAMESPACE)"
             - "--pod-ip=$(POD_IP)"
