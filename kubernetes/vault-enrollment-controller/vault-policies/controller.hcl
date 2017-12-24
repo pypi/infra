@@ -2,19 +2,19 @@ path "auth/kubernetes/role/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-path "secrets/automation/*" {
+path "cabotage-secrets/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-path "consul/roles" {
+path "cabotage-consul/roles" {
   capabilities = ["list"]
 }
 
-path "consul/roles/*" {
+path "cabotage-consul/roles/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-path "consul/creds/*" {
+path "cabotage-consul/creds/*" {
   capabilities = ["read"]
 }
 

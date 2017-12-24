@@ -25,13 +25,17 @@ def log_event(verb, event):
     click.echo(f"{verb} Event: {event['type']} {event['object'].metadata.resource_version}: {event['object'].kind} {event['object'].metadata.namespace}/{event['object'].metadata.name}  ({event['object'].metadata.uid})")
 
 
-POLICY_TEMPLATE="""
-path "secrets/automation/{namespace}/{name}/*" {{
+POLICY_TEMPLATE = """
+path "cabotage-secrets/automation/{namespace}/{name}/*" {{
   capabilities = ["read", "update", "list"]
 }}
 
-path "consul/creds/{namespace}-{name}" {{
+path "cabotage-consul/creds/{namespace}-{name}" {{
   capabilities = ["read"]
+}}
+
+path "cabotage-ca/issue/{namespace}-{name}" {{
+  capabilities = ["create"]
 }}
 """
 

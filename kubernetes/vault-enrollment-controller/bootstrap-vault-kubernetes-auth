@@ -157,8 +157,35 @@ mounts_response=$(
     https://$POD_IP:8200/v1/sys/mounts
 )
 
-mounts=($(echo "$mounts_response" | jq -r '.data | values[].type'))
-if [[ " ${mounts[@]} " =~ " consul " ]]; then
+mounts=($(echo "$mounts_response" | jq -r '.data | keys'))
+
+if [[ " ${mounts[@]} " =~ ' "cabotage-secrets/", ' ]]; then
+  echo "Vault Secrets mount already mounted!"
+else
+  echo "Mounting Vault Secrets mount"
+  mount_response=$(
+    kubectl exec -n vault $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      https://$POD_IP:8200/v1/sys/mounts/cabotage-secrets \
+      --data '
+      {
+        "type": "kv",
+        "description": "secret storage for cabotage",
+        "config": {}
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to enable Consul Secrets mount"
+    echo $mount_response
+    exit 1
+  fi
+fi
+
+if [[ " ${mounts[@]} " =~ ' "cabotage-consul/", ' ]]; then
   echo "Consul Secrets mount already mounted!"
 else
   echo "Enabling Consul Secrets mount"
@@ -168,7 +195,7 @@ else
       --cacert $CA_CERT \
       --header "X-Vault-Token: $VAULT_TOKEN" \
       --request POST \
-      https://$POD_IP:8200/v1/sys/mounts/consul \
+      https://$POD_IP:8200/v1/sys/mounts/cabotage-consul \
       --data '
       {
         "type": "consul",
@@ -209,7 +236,7 @@ else
       --cacert $CA_CERT \
       --header "X-Vault-Token: $VAULT_TOKEN" \
       --request POST \
-      https://$POD_IP:8200/v1/consul/config/access \
+      https://$POD_IP:8200/v1/cabotage-consul/config/access \
       --data '
       {
         "address": "127.0.0.1:8500",
@@ -232,7 +259,7 @@ role_create_response=$(
     curl --silent --show-error --fail \
     --cacert $CA_CERT \
     --header "X-Vault-Token: $VAULT_TOKEN" \
-    https://$POD_IP:8200/v1/consul/roles/readonly \
+    https://$POD_IP:8200/v1/cabotage-consul/roles/readonly \
     --data '
     {
       "token_type": "client",

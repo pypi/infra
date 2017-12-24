@@ -13,7 +13,7 @@ if [ -z $VAULT_TOKEN ]; then
   echo "You must supply VAULT_TOKEN env var with root privileges"
 fi
 
-kubectl exec -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault mounts" | grep ^internal-ca\/ > /dev/null 2>&1
+kubectl exec -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault mounts" | grep ^cabotage-ca\/ > /dev/null 2>&1
 if [ $? -eq 0 ]; then
   echo "Internal CA already mounted"
 else
@@ -21,14 +21,14 @@ else
   kubectl exec -n vault $POD_NAME -c vault-server -- \
     sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault mount \
     -description='Kubernetes Internal Intermediate CA' \
-    -path=internal-ca \
+    -path=cabotage-ca \
     pki"
 fi
 
 URLS='
 {
-    "issuing_certificates": "https://vault-server.vault.svc.cluster.local/v1/internal-ca/ca",
-    "crl_distribution_points": "https://vault-server.vault.svc.cluster.local/v1/internal-ca/crl"
+    "issuing_certificates": "https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/ca",
+    "crl_distribution_points": "https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/crl"
 }
 '
 
@@ -43,24 +43,24 @@ DATA='
 }
 '
 
-kubectl exec -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault read internal-ca/cert/ca" > /dev/null 2>&1
+kubectl exec -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault read cabotage-ca/cert/ca" > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     echo "Internal CA already signed"
 else
     echo "configuring Internal CA..."
     kubectl exec -n vault $POD_NAME -c vault-server -- \
-      sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write internal-ca/config/urls \
-        issuing_certificates='https://vault-server.vault.svc.cluster.local/v1/internal-ca/ca' \
-        crl_distribution_points='https://vault-server.vault.svc.cluster.local/v1/internal-ca/crl'"
+      sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write cabotage-ca/config/urls \
+        issuing_certificates='https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/ca' \
+        crl_distribution_points='https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/crl'"
     echo "generating Internal CA..."
     kubectl exec -n vault $POD_NAME -c vault-server -- \
-      sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write -format=json internal-ca/intermediate/generate/internal \
+      sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write -format=json cabotage-ca/intermediate/generate/internal \
         common_name='Kubernetes Internal Intermediate CA' \
         alt_names='infrastructure-staff@python.org' \
         ttl=43800h \
         key_type=rsa \
         key_bits=4096 \
-        exclude_cn_from_sans=true" | jq -r '.data.csr' > internal.csr
+        exclude_cn_from_sans=true" | jq -r '.data.csr' > cabotage.csr
 
     cfssl_config=$(mktemp)
     cat <<EOF > $cfssl_config
@@ -88,17 +88,17 @@ else
 EOF
 
     echo "signing Internal CA with minikube CA..."
-    CERT=$($GOPATH/bin/cfssl sign -config $cfssl_config -ca ~/.minikube/certs/ca.pem -ca-key ~/.minikube/certs/ca-key.pem -profile intermediate internal.csr | jq '.cert')
+    CERT=$($GOPATH/bin/cfssl sign -config $cfssl_config -ca ~/.minikube/certs/ca.pem -ca-key ~/.minikube/certs/ca-key.pem -profile intermediate cabotage.csr | jq '.cert')
     echo "providing signed Internal CA Certificate back to Vault PKI Backend"
     kubectl exec -n vault $POD_NAME -c consul -- \
       curl --silent --show-error --fail \
       --cacert $CA_CERT \
       --header "X-Vault-Token: $VAULT_TOKEN" \
-      https://$POD_IP:8200/v1/internal-ca/intermediate/set-signed \
+      https://$POD_IP:8200/v1/cabotage-ca/intermediate/set-signed \
       --data '{"certificate": '"$CERT"'}'
 fi
 
 echo "Summary of Internal Certificate Authority"
 echo ""
-kubectl exec -n vault $POD_NAME -c vault-server -- vault read -format=json internal-ca/cert/ca | jq -r '.data.certificate' | openssl x509 -noout -text -certopt no_header,no_version,no_serial,no_signame,no_pubkey,no_sigdump,no_aux
+kubectl exec -n vault $POD_NAME -c vault-server -- vault read -format=json cabotage-ca/cert/ca | jq -r '.data.certificate' | openssl x509 -noout -text -certopt no_header,no_version,no_serial,no_signame,no_pubkey,no_sigdump,no_aux
 echo ""
