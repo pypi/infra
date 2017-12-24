@@ -6,7 +6,6 @@ pushd consul
 ./bootstrap-acls 
 popd
 pushd vault
-kubectl apply -f manifests/initial-secrets.yaml
 export CONSUL_MANAGEMENT_TOKEN=55961ec2-3290-ab00-45e2-a73274f69022
 ./bootstrap-acls 
 kubectl apply -f manifests/vault.yaml 

@@ -9,10 +9,13 @@ POD_NAME=${FIRST_POD[0]}
 POD_IP=${FIRST_POD[1]}
 
 if [ -z $VAULT_TOKEN ]; then
-  echo "You must supply VAULT_TOKEN env var with root privileges"
+  echo "You must supply VAULT_TOKEN env var with vault root privileges"
 fi
 if [ -z $CONSUL_MANAGEMENT_TOKEN ]; then
-  echo ""
+  echo "You must supply CONSUL_MANAGEMENT_TOKEN env var with consul management privileges"
+fi
+if [ -z $VAULT_TOKEN ] || [ -z $CONSUL_MANAGEMENT_TOKEN ] ;then
+  exit 1
 fi
 
 lookup_self_response=$(

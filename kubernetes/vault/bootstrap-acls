@@ -10,6 +10,14 @@ else
   echo "Using Management Token from env CONSUL_MANAGEMENT_TOKEN"
 fi
 
+secret_check=$(kubectl -n vault get secret vault-consul-token 2>&1)
+if [[ $secret_check == *'Error from server (NotFound): secrets "vault-consul-token" not found'* ]]; then
+  echo "creating bootstrapping secret (null)"
+  kubectl create -n vault secret generic vault-consul-token --from-literal=token=null
+else
+  echo "found vault-consul-token!"
+fi
+
 stored_vault_token=$(kubectl -n vault get secret vault-consul-token -o json | jq -r '.data.token' | openssl base64 -d)
 
 if [ "$stored_vault_token" = "null" ]; then
@@ -31,4 +39,6 @@ if [ "$stored_vault_token" = "null" ]; then
   echo "Captured newly created Vault Server Consul Token, storing in secret vault-consul-token"
   kubectl patch secret -n vault vault-consul-token -p '{"data": {"token": "'"$(printf $token | openssl base64)"'"}}'
   echo "Stored vault-consul-token"
+else
+  echo "vault-consul-token already bootstrapped!"
 fi
