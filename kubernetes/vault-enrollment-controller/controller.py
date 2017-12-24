@@ -83,6 +83,33 @@ def delete_role(vault_api, namespace, name):
     vault_api.delete(f"auth/kubernetes/role/{namespace}-{name}")
 
 
+def pki_role_exists(vault_api, namespace, name):
+    result = vault_api.read(f"cabotage-ca/roles/{namespace}-{name}")
+    if result is None:
+        return False
+    return True
+
+
+def create_pki_role(vault_api, namespace, name):
+    vault_api.write(f"cabotage-ca/roles/{namespace}-{name}",
+                    ttl="1h", max_ttl="24h", key_type="ec", key_bits=256,
+                    generate_lease=True,
+                    organization="Cabotage Automated CA", ou=f'{namespace}-{name}',
+                    allow_localhost=False, allow_ip_sans=True,
+                    enforce_hostnames=True,
+                    allow_any_name=True)  # TODO: Tighten this up! Research below options!
+    """
+    allowed_domains (list: []) – https://www.vaultproject.io/api/secret/pki/index.html#allowed_domains
+    allow_bare_domains (bool: false) – https://www.vaultproject.io/api/secret/pki/index.html#allow_bare_domains
+    allow_subdomains (bool: false) – https://www.vaultproject.io/api/secret/pki/index.html#allow_subdomains
+    allow_glob_domains (bool: false) - https://www.vaultproject.io/api/secret/pki/index.html#allow_glob_domains
+    """
+
+
+def delete_pki_role(vault_api, namespace, name):
+    vault_api.delete(f"cabotage-ca/roles/{namespace}-{name}")
+
+
 @click.command()
 @click.option('--vault-token', envvar="VAULT_TOKEN",
               help="The Vault authentication token. If not specified, will attempt to login to v1/auth/kubernetes/login")
@@ -157,6 +184,12 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
                     else:
                         click.echo(f"Vault Policy {item.metadata.namespace}-{item.metadata.name} already deleted")
 
+                    if pki_role_exists(vault_api, item.metadata.namespace, item.metadata.name):
+                        click.echo(f"Deleting Vault PKI role {item.metadata.namespace}-{item.metadata.name}")
+                        delete_pki_role(vault_api, item.metadata.namespace, item.metadata.name)
+                    else:
+                        click.echo(f"Vault PKI Policy {item.metadata.namespace}-{item.metadata.name} already deleted")
+
                     deleted.add(event['object'].metadata.uid)
 
                 if event['type'] == "ADDED":
@@ -180,7 +213,13 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
                     else:
                         click.echo(f"Creating Vault Kubernetes auth role {item.metadata.namespace}-{item.metadata.name}")
                         create_role(vault_api, item.metadata.namespace, item.metadata.name)
-                        
+
+                    if pki_role_exists(vault_api, item.metadata.namespace, item.metadata.name):
+                        click.echo(f"Vault PKI role {item.metadata.namespace}-{item.metadata.name} exists")
+                    else:
+                        click.echo(f"Creating Vault PKI role {item.metadata.namespace}-{item.metadata.name}")
+                        create_pki_role(vault_api, item.metadata.namespace, item.metadata.name)
+
                 latest_resource_version = max(latest_resource_version, int(item.metadata.resource_version))
 
         except Exception as e:

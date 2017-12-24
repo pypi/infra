@@ -21,3 +21,15 @@ path "cabotage-consul/creds/*" {
 path "sys/policy/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
+
+path "cabotage-ca/roles" {
+  capabilities = ["list"]
+}
+
+path "cabotage-ca/roles/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path "cabotage-ca/issue/*" {
+  capabilities = ["create"]
+}

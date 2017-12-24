@@ -8,3 +8,7 @@ path "goldfish-transit/encrypt/server" {
 path "goldfish-transit/decrypt/server" {
   capabilities = ["read", "update"]
 }
+
+path "cabotage-ca/issue/vault-goldfish" {
+  capabilities = ["create"]
+}
