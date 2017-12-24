@@ -221,9 +221,16 @@ spec:
             value: https://$(POD_IP):8201
           ports:
             - containerPort: 443 
+          livenessProbe:
+            httpGet:
+              path: /v1/sys/seal-status
+              port: 8200
+              scheme: HTTPS
           readinessProbe:
-            exec:
-              command: ['vault', 'status']
+            httpGet:
+              path: /v1/sys/health?standbyok
+              port: 8200
+              scheme: HTTPS
             initialDelaySeconds: 5
             initialDelaySeconds: 5
           resources:
