@@ -1,0 +1,46 @@
+#!/bin/bash
+
+CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
+
+set +a            # make sure variables are not automatically exported
+echo "Enter your unseal key"
+unset -v unseal_key # make sure it's not exported
+IFS= read -rs unseal_key < /dev/tty
+
+echo "Unsealing existing vault-server instances"
+
+while read POD_NAME POD_IP ; do
+  seal_response=$(
+    kubectl exec -n vault ${POD_NAME} -c consul -- curl \
+      --silent --show-error --fail \
+      --cacert $CA_CERT \
+      https://${POD_IP}:8200/v1/sys/seal-status
+  )
+  if [ $? -ne 0 ]; then
+    echo "Checking seal status of $POD_NAME failed, check service status and networking?"
+    echo $init_response
+    exit 1
+  fi
+  if [ "$(echo $seal_response | jq -r '.sealed')" == "true" ]; then
+    echo "Unsealing $POD_NAME at $POD_IP"
+    unseal_response=$(kubectl exec -n vault ${POD_NAME} -c consul -- curl \
+      --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --request PUT \
+      --data '{"key": "'"${unseal_key}"'"}' \
+      https://${POD_IP}:8200/v1/sys/unseal)
+    if [ $? -ne 0 ]; then
+      echo "Unseal for $POD_NAME failed, check service status and networking?"
+      echo $unseal_response
+    fi
+    if [ "$(echo $unseal_response | jq -r '.status.sealed')" == "false" ]; then
+      break
+    fi
+  else
+    echo "$POD_NAME already unsealed... which is weird. Check that out"
+  fi
+done < <(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[] | "\(.metadata.name) \(.status.podIP)"')
+
+exit 0
