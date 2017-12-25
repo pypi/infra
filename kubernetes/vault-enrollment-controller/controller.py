@@ -35,7 +35,7 @@ path "cabotage-consul/creds/{namespace}-{name}" {{
 }}
 
 path "cabotage-ca/issue/{namespace}-{name}" {{
-  capabilities = ["create"]
+  capabilities = ["create", "update"]
 }}
 """
 

@@ -31,5 +31,5 @@ path "cabotage-ca/roles/*" {
 }
 
 path "cabotage-ca/issue/*" {
-  capabilities = ["create"]
+  capabilities = ["create", "update"]
 }
