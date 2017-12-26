@@ -8,7 +8,7 @@ data:
       listener "tcp" {
           address = "0.0.0.0:8000"
           tls_disable = 0
-          tls_cert_file = "/etc/tls/cert.pem"
+          tls_cert_file = "/etc/tls/chain.pem"
           tls_key_file = "/etc/tls/key.pem"
       }
       vault {
@@ -39,8 +39,23 @@ spec:
     spec:
       serviceAccountName: goldfish
       initContainers:
+        - name: vault-token-requestor
+          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "kube_login"
+            - "--namespace=$(NAMESPACE)"
+            - "--vault-kubernetes-auth-role=goldfish"
+            - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
+          volumeMounts:
+            - name: vault-token
+              mountPath: /var/run/secrets/vault
         - name: certificate-requestor
-          image: gcr.io/the-psf/certificate-requestor:v1.0.0a1
+          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
           env:
             - name: NAMESPACE
               valueFrom:
@@ -55,30 +70,19 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           args:
+            - "fetch_vault_cert"
+            - "--token-file=/var/run/secrets/vault/vault-token"
+            - "--vault-pki-role=vault-goldfish"
             - "--additional-dnsnames=goldfish,goldfish.$(NAMESPACE),goldfish.$(NAMESPACE).svc.cluster.local"
             - "--cert-dir=/etc/tls"
             - "--namespace=$(NAMESPACE)"
             - "--pod-ip=$(POD_IP)"
             - "--pod-name=$(POD_NAME)"
             - "--service-names=goldfish"
+            - "--service-ips=192.168.99.100"
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
-        - name: vault-token-requestor
-          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
-          env:
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-          args:
-            - "kube_login"
-            - "--namespace=$(NAMESPACE)"
-            - "--vault-kubernetes-auth-role=goldfish"
-            - "--vault-kubernetes-auth-addr=https://vault-server.vault.svc.cluster.local"
-            - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
-            - "--wrap"
-          volumeMounts:
             - name: vault-token
               mountPath: /var/run/secrets/vault
       containers:
@@ -96,7 +100,7 @@ spec:
           command: ['goldfish']
           args:
             - "-config=/etc/goldfish/config.hcl"
-            - "-wrapped-token-file=/var/run/secrets/vault/wrapped-vault-token"
+            - "-nomad-token-file=/var/run/secrets/vault/vault-token"
           ports:
             - containerPort: 8000
               name: http

@@ -24,9 +24,8 @@ spec:
           args:
             - "kube_login"
             - "--namespace=$(NAMESPACE)"
-            - "--vault-kubernetes-auth-role=vault-enrollment-controller"
-            - "--vault-kubernetes-auth-addr=https://vault-server.vault.svc.cluster.local"
             - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
+            - "--vault-kubernetes-auth-role=vault-enrollment-controller"
             - "--wrap"
           volumeMounts:
             - name: vault-token
