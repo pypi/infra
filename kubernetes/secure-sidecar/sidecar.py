@@ -1,8 +1,12 @@
+import datetime
 import os
 import time
 
 import click
 import requests
+
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 
 def wrapping_token_lookup(vault_ca_file, vault_addr, token):
@@ -110,6 +114,38 @@ def write_key_material(cert_dir, private_key, certificate, issuing_ca):
         f.write(b'\n')
 
 
+def certificate_needs_renewed(cert_dir):
+    with open(os.path.join(cert_dir, 'cert.pem'), 'rb') as f:
+        pem_data = f.read()
+    cert = x509.load_pem_x509_certificate(pem_data, default_backend())
+    not_valid_after = cert.not_valid_after
+    return not_valid_after - datetime.datetime.utcnow() < datetime.timedelta(hours=12)
+
+
+def renew_certificate(vault_addr, vault_token, vault_ca_file, vault_pki_backend, vault_pki_role, cert_dir):
+    with open(os.path.join(cert_dir, 'cert.pem'), 'rb') as f:
+        pem_data = f.read()
+    cert = x509.load_pem_x509_certificate(pem_data, default_backend())
+    common_name = [na.value for na in cert.subject if na.oid._dotted_string == "2.5.4.3"][0]
+    subject_alternative_names = [ext.value for ext in cert.extensions if ext.oid._dotted_string == "2.5.29.17"][0]
+    dns_names = subject_alternative_names.get_values_for_type(x509.DNSName)
+    ip_sans = [str(ip) for ip in subject_alternative_names.get_values_for_type(x509.IPAddress)]
+
+    certificate_response = request_vault_certificate(vault_addr, vault_token, vault_ca_file, vault_pki_backend, vault_pki_role, common_name, dns_names, ip_sans)
+    cert_object = certificate_response.json()
+
+    click.echo(f'Obtained Private Key ({cert_object["data"].get("private_key_type")}) and Certificate with:')
+    click.echo(f'  - Serial Number: {cert_object["data"].get("serial_number")}')
+    click.echo(f'  - Vault Lease ID: {cert_object.get("lease_id")}')
+    click.echo(f'  - Vault Lease Duration: {cert_object.get("lease_duration")}')
+
+    private_key = cert_object['data'].get('private_key')
+    certificate = cert_object['data'].get('certificate')
+    issuing_ca = cert_object['data'].get('issuing_ca')
+    write_key_material(cert_dir, private_key, certificate, issuing_ca)
+    click.echo(f'Wrote Key Material to {os.path.join(cert_dir, "{cert.pem, key.pem, ca.pem, chain.pem}")}')
+
+
 @click.group()
 def cli():
     pass
@@ -205,9 +241,12 @@ def fetch_vault_cert(vault_addr, vault_ca_file, vault_pki_backend, vault_pki_rol
 @click.option('--vault-addr', default="https://vault-server.vault.svc.cluster.local", help="Vault address to communicate with.")
 @click.option('--vault-ca-file', default="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", help="Certificate Authority to verify Vault TLS.")
 @click.option('--token-file', default="/var/run/secrets/vault/vault-token", help="Path Vault Token is stored at", type=click.File(mode='rU'))
+@click.option('--cert-dir', default="/etc/tls", help="Path Vault Issued Certificate and Key are stored at", type=click.Path())
 @click.option('--write-token-file', default="/var/run/secrets/vault/vault-token", help="Path Vault Token is stored at", type=click.File(mode='w'))
 @click.option('--unwrap/--no-unwrap', default=False, help="Unwrap stored vault token, may not be desirable for some apps")
-def fetch_and_renew(vault_addr, vault_ca_file, token_file, write_token_file, unwrap):
+@click.option('--vault-pki-backend', default="cabotage-ca", help="Vault PKI backend to request certificate from.")
+@click.option('--vault-pki-role', required=True, help="Vault PKI role to request certificate from.")
+def fetch_and_renew(vault_addr, vault_ca_file, token_file, cert_dir, write_token_file, unwrap, vault_pki_backend, vault_pki_role):
     token = token_file.read()
     if unwrap:
         click.echo("Unwrapping from stored wrapped token")
@@ -235,6 +274,9 @@ def fetch_and_renew(vault_addr, vault_ca_file, token_file, write_token_file, unw
                 sleep = min_sleep
             else:
                 sleep = max(min_sleep, int(token_info['data']['ttl']/4))
+        if os.path.exists(os.path.join(cert_dir, 'cert.pem')):
+            if certificate_needs_renewed(cert_dir):
+                renew_certificate(vault_addr, token, vault_ca_file, vault_pki_backend, vault_pki_role, cert_dir)
         click.echo(f'sleeping {sleep} seconds...')
         time.sleep(sleep)
 
