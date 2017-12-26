@@ -79,7 +79,6 @@ spec:
             - "--pod-ip=$(POD_IP)"
             - "--pod-name=$(POD_NAME)"
             - "--service-names=goldfish"
-            - "--service-ips=192.168.99.100"
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
