@@ -88,7 +88,7 @@ else
 EOF
 
     echo "signing Internal CA with minikube CA..."
-    CERT=$($GOPATH/bin/cfssl sign -config $cfssl_config -ca ~/.minikube/certs/ca.pem -ca-key ~/.minikube/certs/ca-key.pem -profile intermediate cabotage.csr | jq '.cert')
+    CERT=$($GOPATH/bin/cfssl sign -config $cfssl_config -ca ~/.minikube/ca.crt -ca-key ~/.minikube/ca.key -profile intermediate cabotage.csr | jq '.cert')
     echo "providing signed Internal CA Certificate back to Vault PKI Backend"
     kubectl exec -n vault $POD_NAME -c consul -- \
       curl --silent --show-error --fail \
