@@ -15,6 +15,7 @@ popd
 pushd vault-enrollment-controller/
 kubectl apply -f manifests
 ./bootstrap-vault-kubernetes-auth 
+./bootstrap-vault-ca-minikube
 popd
 pushd goldfish/
 ./boostrap-vault-goldfish 
