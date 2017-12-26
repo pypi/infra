@@ -89,9 +89,25 @@ def request_vault_certificate(vault_addr, vault_token, vault_ca_file, vault_pki_
                              json={"common_name": common_name, "alt_names": ','.join(alt_names), "ip_sans": ','.join(ip_sans)},
                              headers={'X-Vault-Token': vault_token},
                              verify=vault_ca_file)
-    print(response.content)
     response.raise_for_status()
     return response
+
+
+def write_key_material(cert_dir, private_key, certificate, issuing_ca):
+    with open(os.path.join(cert_dir, 'key.pem'), 'wb') as f:
+        f.write(private_key.encode('utf-8'))
+        f.write(b'\n')
+    with open(os.path.join(cert_dir, 'cert.pem'), 'wb') as f:
+        f.write(certificate.encode('utf-8'))
+        f.write(b'\n')
+    with open(os.path.join(cert_dir, 'ca.pem'), 'wb') as f:
+        f.write(issuing_ca.encode('utf-8'))
+        f.write(b'\n')
+    with open(os.path.join(cert_dir, 'chain.pem'), 'wb') as f:
+        f.write(certificate.encode('utf-8'))
+        f.write(b'\n')
+        f.write(issuing_ca.encode('utf-8'))
+        f.write(b'\n')
 
 
 @click.group()
@@ -171,9 +187,18 @@ def fetch_vault_cert(vault_addr, vault_ca_file, vault_pki_backend, vault_pki_rol
     common_name = dnsnames[0]
 
     certificate_response = request_vault_certificate(vault_addr, token_file.read(), vault_ca_file, vault_pki_backend, vault_pki_role, common_name, set(dnsnames), set(ips))
-    certificate_data = certificate_response.json()['data']
-    from pprint import pprint as pp
-    pp(certificate_data)
+    cert_object = certificate_response.json()
+
+    click.echo(f'Obtained Private Key ({cert_object["data"].get("private_key_type")}) and Certificate with:')
+    click.echo(f'  - Serial Number: {cert_object["data"].get("serial_number")}')
+    click.echo(f'  - Vault Lease ID: {cert_object.get("lease_id")}')
+    click.echo(f'  - Vault Lease Duration: {cert_object.get("lease_duration")}')
+
+    private_key = cert_object['data'].get('private_key')
+    certificate = cert_object['data'].get('certificate')
+    issuing_ca = cert_object['data'].get('issuing_ca')
+    write_key_material(cert_dir, private_key, certificate, issuing_ca)
+    click.echo(f'Wrote Key Material to {os.path.join(cert_dir, "{cert.pem, key.pem, ca.pem, chain.pem}")}')
 
 
 @cli.command()
