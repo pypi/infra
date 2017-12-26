@@ -92,7 +92,7 @@ def pki_role_exists(vault_api, namespace, name):
 
 def create_pki_role(vault_api, namespace, name):
     vault_api.write(f"cabotage-ca/roles/{namespace}-{name}",
-                    ttl="1h", max_ttl="24h", key_type="ec", key_bits=256,
+                    ttl="168h", max_ttl="168h", key_type="ec", key_bits=256,
                     generate_lease=True,
                     organization="Cabotage Automated CA", ou=f'{namespace}-{name}',
                     allow_localhost=False, allow_ip_sans=True,
