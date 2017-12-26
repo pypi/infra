@@ -10,8 +10,9 @@ ENV PATH="/opt/approver/bin:${PATH}"
 RUN pip --no-cache-dir --disable-pip-version-check install --upgrade pip setuptools wheel
 
 COPY requirements.txt /opt/approver/requirements.txt
-COPY approver.py /opt/approver/approver.py
 
 RUN pip --no-cache-dir --disable-pip-version-check install -r /opt/approver/requirements.txt
+
+COPY approver.py /opt/approver/approver.py
 
 ENTRYPOINT ["python", "/opt/approver/approver.py"]

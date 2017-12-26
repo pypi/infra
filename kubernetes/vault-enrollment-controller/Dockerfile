@@ -10,8 +10,9 @@ ENV PATH="/opt/controller/bin:${PATH}"
 RUN pip --no-cache-dir --disable-pip-version-check install --upgrade pip setuptools wheel
 
 COPY requirements.txt /opt/controller/requirements.txt
-COPY controller.py /opt/controller/controller.py
 
 RUN pip --no-cache-dir --disable-pip-version-check install -r /opt/controller/requirements.txt
+
+COPY controller.py /opt/controller/controller.py
 
 ENTRYPOINT ["python", "/opt/controller/controller.py"]

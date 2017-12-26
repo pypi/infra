@@ -10,8 +10,9 @@ ENV PATH="/opt/sidecar/bin:${PATH}"
 RUN pip --no-cache-dir --disable-pip-version-check install --upgrade pip setuptools wheel
 
 COPY requirements.txt /opt/sidecar/requirements.txt
-COPY sidecar.py /opt/sidecar/sidecar.py
 
 RUN pip --no-cache-dir --disable-pip-version-check install -r /opt/sidecar/requirements.txt
+
+COPY sidecar.py /opt/sidecar/sidecar.py
 
 ENTRYPOINT ["python", "/opt/sidecar/sidecar.py"]
