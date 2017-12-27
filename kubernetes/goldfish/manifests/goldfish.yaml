@@ -85,6 +85,22 @@ spec:
             - name: vault-token
               mountPath: /var/run/secrets/vault
       containers:
+        - name: secure-sidecar
+          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "fetch_and_renew"
+            - "--token-file=/var/run/secrets/vault/vault-token"
+            - "--vault-pki-role=vault-goldfish"
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+            - name: vault-token
+              mountPath: /var/run/secrets/vault
         - name: goldfish
           image: gcr.io/the-psf/goldfish:v1.0.0a1
           env:
