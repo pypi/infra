@@ -51,6 +51,8 @@ spec:
             - "--namespace=$(NAMESPACE)"
             - "--vault-kubernetes-auth-role=goldfish"
             - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
+            - "--wrap"
+            - "--unwrap"
           volumeMounts:
             - name: vault-token
               mountPath: /var/run/secrets/vault

@@ -159,7 +159,7 @@ def cli():
 @click.option('--vault-kubernetes-auth-backend', default="auth/kubernetes/login", help="Path to attempt Vault Kubernetes Auth against")
 @click.option('--vault-kubernetes-auth-token-path', default="/var/run/secrets/vault/", help="Directory to store vault-token file in", type=click.Path(exists=True))
 @click.option('--wrap/--no-wrap', default=False, help="Use Vault Response Wrapping when requesting tokens, etc")
-@click.option('--unwrap/--no-unwrap', default=False, help="Unwrap Vault Token response, may not be desirable for some apps")
+@click.option('--unwrap/--no-unwrap', default=False, help="Unwrap Vault responses, may not be desirable for some apps")
 def kube_login(namespace, vault_addr, vault_ca_file, vault_kubernetes_auth_role, vault_kubernetes_auth_backend, vault_kubernetes_auth_token_path, wrap, unwrap):
     if vault_kubernetes_auth_role:
         click.echo(f'Attempting Vault Auth Login with Kubernetes for {namespace}-{vault_kubernetes_auth_role}')
@@ -245,7 +245,7 @@ def fetch_vault_cert(vault_addr, vault_ca_file, vault_pki_backend, vault_pki_rol
 @click.option('--write-token-file', default="/var/run/secrets/vault/vault-token", help="Path Vault Token is stored at", type=click.File(mode='w'))
 @click.option('--unwrap/--no-unwrap', default=False, help="Unwrap stored vault token, may not be desirable for some apps")
 @click.option('--vault-pki-backend', default="cabotage-ca", help="Vault PKI backend to request certificate from.")
-@click.option('--vault-pki-role', required=True, help="Vault PKI role to request certificate from.")
+@click.option('--vault-pki-role', help="Vault PKI role to request certificate from.")
 def fetch_and_renew(vault_addr, vault_ca_file, token_file, cert_dir, write_token_file, unwrap, vault_pki_backend, vault_pki_role):
     token = token_file.read()
     if unwrap:
@@ -260,6 +260,8 @@ def fetch_and_renew(vault_addr, vault_ca_file, token_file, cert_dir, write_token
         token = unwrap_vault_response(vault_ca_file, vault_addr, token).json()["auth"]["client_token"]
         write_token_file.write(token)
         write_token_file.close()
+        token_file.close()
+        os.remove(token_file.name)
     token_info = token_lookup_self(vault_ca_file, vault_addr, token).json()
     click.echo(f'Using token with accessor {token_info["data"]["accessor"]} and policies {", ".join(token_info["data"]["policies"])}')
 

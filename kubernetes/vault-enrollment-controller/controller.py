@@ -1,3 +1,4 @@
+import base64
 import signal
 import sys
 import json
@@ -25,7 +26,18 @@ def log_event(verb, event):
     click.echo(f"{verb} Event: {event['type']} {event['object'].metadata.resource_version}: {event['object'].kind} {event['object'].metadata.namespace}/{event['object'].metadata.name}  ({event['object'].metadata.uid})")
 
 
-POLICY_TEMPLATE = """
+CONSUL_POLICY_TEMPLATE = """
+key "cabotage/{namespace}/{name}" {{
+  policy = "list"
+}}
+
+key "cabotage/{namespace}/{name}/mutable" {{
+  policy = "write"
+}}
+"""
+
+
+VAULT_POLICY_TEMPLATE = """
 path "cabotage-secrets/automation/{namespace}/{name}/*" {{
   capabilities = ["read", "update", "list"]
 }}
@@ -48,7 +60,7 @@ def policy_exists(vault_api, namespace, name):
 
 
 def create_policy(vault_api, namespace, name):
-    policy = POLICY_TEMPLATE.format(namespace=namespace, name=name)
+    policy = VAULT_POLICY_TEMPLATE.format(namespace=namespace, name=name)
     vault_api.set_policy(name=f'{namespace}-{name}', rules=policy)
 
 
@@ -108,6 +120,24 @@ def create_pki_role(vault_api, namespace, name):
 
 def delete_pki_role(vault_api, namespace, name):
     vault_api.delete(f"cabotage-ca/roles/{namespace}-{name}")
+
+
+def consul_role_exists(vault_api, namespace, name):
+    result = vault_api.read(f"cabotage-consul/roles/{namespace}-{name}")
+    if result is None:
+        return False
+    return True
+
+
+def create_consul_role(vault_api, namespace, name):
+    vault_api.write(f"cabotage-consul/roles/{namespace}-{name}",
+                    lease="21600s",
+                    policy=base64.b64encode(CONSUL_POLICY_TEMPLATE.format(namespace=namespace, name=name).encode('utf-8')).decode('utf-8'),
+                    token_type='client')
+
+
+def delete_consul_role(vault_api, namespace, name):
+    vault_api.delete(f"cabotage-consul/roles/{namespace}-{name}")
 
 
 @click.command()
@@ -184,6 +214,12 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
                     else:
                         click.echo(f"Vault Policy {item.metadata.namespace}-{item.metadata.name} already deleted")
 
+                    if consul_role_exists(vault_api, item.metadata.namespace, item.metadata.name):
+                        click.echo(f"Deleting Vault Consul role {item.metadata.namespace}-{item.metadata.name}")
+                        delete_consul_role(vault_api, item.metadata.namespace, item.metadata.name)
+                    else:
+                        click.echo(f"Vault Consul role {item.metadata.namespace}-{item.metadata.name} already deleted")
+
                     if pki_role_exists(vault_api, item.metadata.namespace, item.metadata.name):
                         click.echo(f"Deleting Vault PKI role {item.metadata.namespace}-{item.metadata.name}")
                         delete_pki_role(vault_api, item.metadata.namespace, item.metadata.name)
@@ -213,6 +249,12 @@ def main(vault_token, vault_addr, vault_cacert, serviceaccount_label):
                     else:
                         click.echo(f"Creating Vault Kubernetes auth role {item.metadata.namespace}-{item.metadata.name}")
                         create_role(vault_api, item.metadata.namespace, item.metadata.name)
+
+                    if consul_role_exists(vault_api, item.metadata.namespace, item.metadata.name):
+                        click.echo(f"Vault Consul role {item.metadata.namespace}-{item.metadata.name} exists")
+                    else:
+                        click.echo(f"Creating Vault Consul role {item.metadata.namespace}-{item.metadata.name}")
+                        create_consul_role(vault_api, item.metadata.namespace, item.metadata.name)
 
                     if pki_role_exists(vault_api, item.metadata.namespace, item.metadata.name):
                         click.echo(f"Vault PKI role {item.metadata.namespace}-{item.metadata.name} exists")

@@ -31,7 +31,8 @@ data:
       "key_file": "/etc/tls/key.pem",
       "acl_datacenter": "us-east1",
       "acl_default_policy": "deny",
-      "verify_incoming": true,
+      "acl_enable_key_list_policy": true,
+      "verify_incoming": false,
       "verify_outgoing": true,
       "verify_server_hostname": true,
       "ports": {
