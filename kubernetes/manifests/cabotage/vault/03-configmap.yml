@@ -1,0 +1,262 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-server
+  namespace: vault
+data:
+  config.json: |
+      {
+        "listener": [
+          {
+            "tcp": {
+              "address": "0.0.0.0:8200",
+              "tls_cert_file": "/etc/tls/cert.pem",
+              "tls_key_file": "/etc/tls/key.pem"
+            }
+          }
+        ]
+      }
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  namespace: vault
+  name: vault-server
+  labels:
+    app: vault-server
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: vault-server
+        color: blue
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - vault-server
+                  - key: color
+                    operator: In
+                    values:
+                      - blue
+              topologyKey: failure-domain.beta.kubernetes.io/zone
+      serviceAccountName: vault
+      initContainers:
+        - name: certificate-requestor
+          image: gcr.io/the-psf/certificate-requestor:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          args:
+            - "--additional-dnsnames="
+            - "--cert-dir=/etc/tls"
+            - "--namespace=$(NAMESPACE)"
+            - "--pod-ip=$(POD_IP)"
+            - "--pod-name=$(POD_NAME)"
+            - "--service-names=vault-server"
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+        - name: consul-secret-writer
+          image: alpine:3.7
+          env:
+            - name: CONSUL_ACL_AGENT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: consul-agent-token
+                  key: token
+            - name: GOSSIP_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: consul-gossip-key
+                  key: key
+          command: ['/bin/sh']
+          args: ['/opt/scripts/write-secrets.sh']
+          volumeMounts:
+            - name: consul-secrets
+              mountPath: /etc/consul/secrets
+            - name: consul-scripts
+              mountPath: /opt/scripts
+        - name: vault-secret-writer
+          image: gcr.io/google-containers/startup-script:v1
+          env:
+            - name: CONSUL_ACL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-consul-token
+                  key: token
+            - name: STARTUP_SCRIPT
+              value: |
+                #/bin/bash
+                cat > /vault/secrets/consul.json <<EOF
+                {
+                  "storage": {
+                    "consul": {
+                      "address": "127.0.0.1:8500",
+                      "scheme": "http",
+                      "path": "vault/",
+                      "token": "$CONSUL_ACL_TOKEN"
+                    }
+                  }
+                }
+                EOF
+                echo "Wrote /vault/secrets/consul.json"
+          command: ['/bin/bash']
+          args: ['-c', '$(STARTUP_SCRIPT)']
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /vault/secrets
+      containers:
+        - name: consul
+          image: consul:1.0.1
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "agent"
+            - "-advertise=$(POD_IP)"
+            - "-bind=0.0.0.0"
+            - "-datacenter=us-east1"
+            - "-retry-join=consul-0.consul-internal.$(NAMESPACE).svc.cluster.local"
+            - "-retry-join=consul-1.consul-internal.$(NAMESPACE).svc.cluster.local"
+            - "-retry-join=consul-2.consul-internal.$(NAMESPACE).svc.cluster.local"
+            - "-domain=cluster.local"
+            - "-config-file=/etc/consul/config/server.json"
+            - "-config-dir=/etc/consul/secrets/"
+          ports:
+            - containerPort: 8300
+              name: server-rpc
+            - containerPort: 8301
+              name: serf-lan
+            - containerPort: 8302
+              name: serf-wan
+            - containerPort: 8500
+              name: http-api
+            - containerPort: 8600
+              name: dns-api
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+            - name: consul-config
+              mountPath: /etc/consul/config
+            - name: consul-secrets
+              mountPath: /etc/consul/secrets
+            - name: consul-data
+              mountPath: /consul/data
+        - name: vault-server
+          image: vault:0.9.0
+          imagePullPolicy: Always
+          command: ["vault"]
+          args:
+          - "server"
+          - "-config"
+          - "/vault/config/config.json"
+          - "-config"
+          - "/vault/secrets/consul.json"
+          env:
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          - name: VAULT_ADDR
+            value: https://$(POD_IP):8200
+          - name: VAULT_CACERT
+            value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          - name: VAULT_CLUSTER_ADDR
+            value: https://$(POD_IP):8201
+          ports:
+            - containerPort: 443 
+          livenessProbe:
+            httpGet:
+              path: /v1/sys/seal-status
+              port: 8200
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health?standbyok
+              port: 8200
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            initialDelaySeconds: 5
+          resources:
+            limits:
+              memory: "50Mi"
+              cpu: "100m"
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls
+            - name: vault-config
+              mountPath: /vault/config/
+            - name: vault-secrets
+              mountPath: /vault/secrets/
+          securityContext:
+            readOnlyRootFilesystem: true
+            capabilities:
+              add:
+              - IPC_LOCK
+      volumes:
+        - name: tls
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: consul-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: consul-data
+          emptyDir: {}
+        - name: consul-config
+          configMap:
+            name: consul
+        - name: consul-scripts
+          configMap:
+            name: consul-scripts
+        - name: vault-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: vault-config
+          configMap:
+            name: vault-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: vault-server
+  name: vault-server
+  namespace: vault
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 8200
+  selector:
+    app: vault-server
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

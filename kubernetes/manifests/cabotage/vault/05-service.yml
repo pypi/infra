@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: vault-server
+  name: vault-server
+  namespace: vault
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 8200
+  selector:
+    app: vault-server
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
