@@ -1,10 +1,10 @@
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
+  namespace: cabotage
   name: consul
-  namespace: vault
 spec:
-  serviceName: consul-internal
+  serviceName: consul
   replicas: 3
   podManagementPolicy: Parallel
   updateStrategy:
@@ -12,7 +12,7 @@ spec:
   template:
     metadata:
       labels:
-        app: consul-internal
+        app: consul
     spec:
       affinity:
         podAntiAffinity:
@@ -22,7 +22,7 @@ spec:
                   - key: app
                     operator: In
                     values:
-                      - consul-internal
+                      - consul
               topologyKey: failure-domain.beta.kubernetes.io/zone
       serviceAccountName: consul
       initContainers:
@@ -47,7 +47,7 @@ spec:
             - "--namespace=$(NAMESPACE)"
             - "--pod-ip=$(POD_IP)"
             - "--pod-name=$(POD_NAME)"
-            - "--service-names=consul,consul-internal"
+            - "--service-names=consul"
           volumeMounts:
             - name: tls
               mountPath: /etc/tls
@@ -90,9 +90,9 @@ spec:
             - "-advertise=$(POD_IP)"
             - "-bind=0.0.0.0"
             - "-bootstrap-expect=$(INITIAL_CLUSTER_SIZE)"
-            - "-retry-join=consul-0.consul-internal.$(NAMESPACE).svc.cluster.local"
-            - "-retry-join=consul-1.consul-internal.$(NAMESPACE).svc.cluster.local"
-            - "-retry-join=consul-2.consul-internal.$(NAMESPACE).svc.cluster.local"
+            - "-retry-join=consul-0.consul.$(NAMESPACE).svc.cluster.local"
+            - "-retry-join=consul-1.consul.$(NAMESPACE).svc.cluster.local"
+            - "-retry-join=consul-2.consul.$(NAMESPACE).svc.cluster.local"
             - "-client=0.0.0.0"
             - "-domain=cluster.local"
             - "-datacenter=us-east1"

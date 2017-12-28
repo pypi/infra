@@ -4,9 +4,9 @@ metadata:
   annotations:
     service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
   labels:
-    app: consul-internal
-  name: consul
-  namespace: vault
+    app: consul
+  name: consul-api
+  namespace: cabotage
 spec:
   ports:
   - name:
@@ -14,5 +14,5 @@ spec:
     protocol: TCP
     targetPort: 8443
   selector:
-    app: consul-internal
+    app: consul
   type: ClusterIP

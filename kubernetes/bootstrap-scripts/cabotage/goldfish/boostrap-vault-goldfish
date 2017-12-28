@@ -1,8 +1,12 @@
 #!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR
+
+NAMESPACE=cabotage
 
 command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
 
-FIRST_POD=($(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
+FIRST_POD=($(kubectl get pod -n $NAMESPACE -l 'app=vault' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
 CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
 POD_NAME=${FIRST_POD[0]}
@@ -13,7 +17,7 @@ if [ -z $VAULT_TOKEN ]; then
 fi
 
 lookup_self_response=$(
-  kubectl exec -n vault $POD_NAME -c consul -- \
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
     curl --silent --show-error --fail \
     --cacert $CA_CERT \
     --header "X-Vault-Token: $VAULT_TOKEN" \
@@ -34,12 +38,12 @@ fi
 
 POLICY=$(python3 -c "import json; policy_doc = open('vault-policies/goldfish.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
 create_policy_response=$(
-  kubectl exec -n vault $POD_NAME -c consul -- \
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
     curl --silent --show-error --fail \
     --cacert $CA_CERT \
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
-    https://$POD_IP:8200/v1/sys/policy/vault-goldfish \
+    https://$POD_IP:8200/v1/sys/policy/cabotage-goldfish \
     --data '{"rules": '"$POLICY"'}'
 )
 if [ $? -ne 0 ]; then
@@ -49,28 +53,28 @@ if [ $? -ne 0 ]; then
 fi
 echo "Successfully created vault policy for goldfish"
 
-kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault mount \
   -path goldfish-secret \
   -description 'secret storage for goldfish' \
   kv"
 
-kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault mount \
   -path goldfish-transit \
   -description 'transit backend for goldfish'\
   transit"
-kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault write -f goldfish-transit/keys/server"
-kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault write -f goldfish-transit/keys/user"
 
 echo "writing initial configuration for goldfish"
-kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault write goldfish-secret/runtime-config \
   DefaultSecretPath='goldfish-secret/' \
@@ -79,7 +83,7 @@ kubectl exec -it -n vault $POD_NAME -c vault-server -- \
   ServerTransitKey='server' \
   UserTransitKey='user'"
 
-kubectl exec -it -n vault $POD_NAME -c vault-server -- \
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault write goldfish-secret/bulletins/initial \
   type=is-success \

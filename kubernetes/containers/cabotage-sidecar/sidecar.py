@@ -251,7 +251,7 @@ def cli():
 
 @cli.command()
 @click.option('--namespace', default="default", help="namespace as defined by pod.metadata.namespace")
-@click.option('--vault-addr', default="https://vault-server.vault.svc.cluster.local", help="Vault Address to request for Kubernetes Auth.")
+@click.option('--vault-addr', default="https://vault.cabotage.svc.cluster.local", help="Vault Address to request for Kubernetes Auth.")
 @click.option('--vault-ca-file', default="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", help="Certificate Authority to verify Vault TLS.")
 @click.option('--vault-secrets-path', default="/var/run/secrets/vault/", help="Directory to store secrets in", type=click.Path(exists=True, file_okay=False, writable=True))
 @click.option('--vault-auth-kubernetes-role', default=None, help="Vault Role to request for Kubernetes Auth.")
@@ -329,7 +329,7 @@ def kube_login(namespace, vault_addr, vault_ca_file, vault_secrets_path,
 
 
 @cli.command()
-@click.option('--vault-addr', default="https://vault-server.vault.svc.cluster.local", help="Vault address to communicate with.")
+@click.option('--vault-addr', default="https://vault.cabotage.svc.cluster.local", help="Vault address to communicate with.")
 @click.option('--vault-ca-file', default="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", help="Certificate Authority to verify Vault TLS.")
 @click.option('--vault-secrets-path', default="/var/run/secrets/vault/", help="Directory to store secrets in", type=click.Path(exists=True, file_okay=False, writable=True))
 @click.option('--vault-token-file', default="/var/run/secrets/vault/vault-token", help="Path Vault Token is stored at", type=click.File(mode='rU'))
@@ -352,7 +352,7 @@ def maintain(vault_addr, vault_ca_file, vault_secrets_path, vault_token_file,
             click.echo("Issue looking up wrapping token ID!: %s" % (exc,))
             click.echo("Something may be amiss!")
             click.Abort()
-        vault_token = unwrap_vault_response(vault_ca_file, vault_addr, token).json()["auth"]["client_token"]
+        vault_token = unwrap_vault_response(vault_ca_file, vault_addr, vault_token).json()["auth"]["client_token"]
         write_vault_token_file.write(vault_token)
         write_vault_token_file.close()
         vault_token_file.close()

@@ -1,21 +1,21 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  namespace: vault
-  name: vault-enrollment-controller
+  namespace: cabotage
+  name: enrollment-controller
   labels:
-    app: vault-enrollment-controller
+    app: enrollment-controller
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: vault-enrollment-controller
+        app: enrollment-controller
     spec:
-      serviceAccountName: vault-enrollment-controller
+      serviceAccountName: enrollment-controller
       initContainers:
-        - name: kube-login
-          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+        - name: cabotage-enroller
+          image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
           env:
             - name: NAMESPACE
               valueFrom:
@@ -23,14 +23,14 @@ spec:
                   fieldPath: metadata.namespace
           args:
             - "kube_login"
-            - "--vault-kubernetes-auth-role=vault-enrollment-controller"
-            - "--wrap"
+            - "--vault-auth-kubernetes-role=cabotage-enrollment-controller"
+            - "--no-unwrap"
           volumeMounts:
             - name: vault-token
               mountPath: /var/run/secrets/vault
       containers:
-        - name: secure-sidecar
-          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+        - name: cabotage-sidecar
+          image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
           env:
             - name: NAMESPACE
               valueFrom:
@@ -38,17 +38,16 @@ spec:
                   fieldPath: metadata.namespace
           args:
             - "maintain"
-            - "--token-file=/var/run/secrets/vault/wrapped-vault-token"
-            - "--write-token-file=/var/run/secrets/vault/vault-token"
+            - "--vault-token-file=/var/run/secrets/vault/wrapped-vault-token"
             - "--unwrap"
           volumeMounts:
             - name: vault-token
               mountPath: /var/run/secrets/vault
-        - name: vault-enrollment-controller
-          image: gcr.io/the-psf/vault-enrollment-controller:v1.0.0a1
+        - name: enrollment-controller
+          image: gcr.io/the-psf/cabotage-enrollment-controller:v1.0.0a1
           args:
             - "--vault-token=@/var/run/secrets/vault/vault-token"
-            - "--vault-addr=https://vault-server.vault.svc.cluster.local"
+            - "--vault-addr=https://vault.cabotage.svc.cluster.local"
             - "--vault-cacert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
           volumeMounts:
             - name: vault-token

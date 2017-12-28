@@ -2,16 +2,16 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: vault-server
-  name: vault-server
-  namespace: vault
+    app: vault
+  namespace: cabotage
+  name: vault
 spec:
   ports:
   - port: 443
     protocol: TCP
     targetPort: 8200
   selector:
-    app: vault-server
+    app: vault
   sessionAffinity: None
   type: ClusterIP
 status:

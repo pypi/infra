@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  namespace: cabotage
   name: goldfish
-  namespace: vault
 data:
   config.hcl: |
       listener "tcp" {
@@ -12,7 +12,7 @@ data:
           tls_key_file = "/var/run/secrets/vault/key.pem"
       }
       vault {
-          address         = "https://vault-server.vault.svc.cluster.local"
+          address         = "https://vault.cabotage.svc.cluster.local"
           ca_cert         = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
           tls_skip_verify = 0
 

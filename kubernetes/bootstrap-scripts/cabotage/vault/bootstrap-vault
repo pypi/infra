@@ -1,10 +1,14 @@
 #!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR
+
+NAMESPACE=cabotage
 
 function join_by { local IFS="$1"; shift; echo "$*"; }
 
 command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
 
-FIRST_POD=($(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
+FIRST_POD=($(kubectl get pod -n ${NAMESPACE} -l 'app=vault' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
 CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
 INIT_OPTS=""
@@ -31,7 +35,7 @@ fi
 echo "Connecting to ${FIRST_POD[0]} at ${FIRST_POD[1]}"
 
 vault_status=$(
-    kubectl exec -n vault ${FIRST_POD[0]} -c consul -- curl \
+    kubectl exec -n ${NAMESPACE} ${FIRST_POD[0]} -c consul -- curl \
     --silent --show-error --fail \
     --cacert $CA_CERT \
     https://${FIRST_POD[1]}:8200/v1/sys/init
@@ -46,7 +50,7 @@ if [ "$(echo $vault_status | jq -r '.initialized')" == "false" ]; then
   echo "bootstrapping vault!"
   echo ""
   init_response=$(
-    kubectl exec -n vault ${FIRST_POD[0]} -c vault-server -- vault init $INIT_OPTS
+    kubectl exec -n ${NAMESPACE} ${FIRST_POD[0]} -c vault -- vault init $INIT_OPTS
   )
   if [ $? -ne 0 ]; then
     echo "Initializing Vault failed, check service status and networking?"
@@ -95,11 +99,11 @@ fi
 
 # Keys are in memory... might as well unseal!
 
-echo "Unsealing existing vault-server instances"
+echo "Unsealing existing vault instances"
 
 while read POD_NAME POD_IP ; do
   seal_response=$(
-    kubectl exec -n vault ${POD_NAME} -c consul -- curl \
+    kubectl exec -n ${NAMESPACE} ${POD_NAME} -c consul -- curl \
       --silent --show-error --fail \
       --cacert $CA_CERT \
       https://${POD_IP}:8200/v1/sys/seal-status
@@ -112,7 +116,7 @@ while read POD_NAME POD_IP ; do
   if [ "$(echo $seal_response | jq -r '.sealed')" == "true" ]; then
     echo "Unsealing $POD_NAME at $POD_IP"
     for (( c=0; c<$SECRET_THRESHOLD; c++ )); do
-        unseal_response=$(kubectl exec -n vault ${POD_NAME} -c consul -- curl \
+        unseal_response=$(kubectl exec -n ${NAMESPACE} ${POD_NAME} -c consul -- curl \
           --silent --show-error --fail \
           --cacert $CA_CERT \
           --request PUT \
@@ -129,6 +133,6 @@ while read POD_NAME POD_IP ; do
   else
     echo "$POD_NAME already unsealed... which is weird. Check that out"
   fi
-done < <(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[] | "\(.metadata.name) \(.status.podIP)"')
+done < <(kubectl get pod -n ${NAMESPACE} -l 'app=vault' -o json | jq -r '.items[] | "\(.metadata.name) \(.status.podIP)"')
 
 exit 0

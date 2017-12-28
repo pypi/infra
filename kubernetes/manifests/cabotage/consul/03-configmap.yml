@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  namespace: cabotage
   name: consul-scripts
-  namespace: vault
 data:
   write-secrets.sh: |
     if [ "$CONSUL_ACL_AGENT_TOKEN" != "null" ]; then

@@ -1,9 +1,14 @@
 #!/bin/bash
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR
+
+NAMESPACE=cabotage
+
 command -v jq > /dev/null 2>&1 || { echo "you must have 'jq' installed"; exit 1; }
 command -v $GOPATH/bin/cfssl > /dev/null 2>&1 || { echo "you must have 'cfssl' installed _from source_ see https://github.com/cloudflare/cfssl/issues/657#issuecomment-288015562"; exit 1; }
 
-FIRST_POD=($(kubectl get pod -n vault -l 'app=vault-server' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
+FIRST_POD=($(kubectl get pod -n $NAMESPACE -l 'app=vault' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
 CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
 POD_NAME=${FIRST_POD[0]}
@@ -13,12 +18,12 @@ if [ -z $VAULT_TOKEN ]; then
   echo "You must supply VAULT_TOKEN env var with root privileges"
 fi
 
-kubectl exec -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault mounts" | grep ^cabotage-ca\/ > /dev/null 2>&1
+kubectl exec -n $NAMESPACE $POD_NAME -c vault -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault mounts" | grep ^cabotage-ca\/ > /dev/null 2>&1
 if [ $? -eq 0 ]; then
   echo "Internal CA already mounted"
 else
   echo "Mounting Vault PKI backend for Internal CA"
-  kubectl exec -n vault $POD_NAME -c vault-server -- \
+  kubectl exec -n $NAMESPACE $POD_NAME -c vault -- \
     sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault mount \
     -description='Kubernetes Internal Intermediate CA' \
     -path=cabotage-ca \
@@ -27,8 +32,8 @@ fi
 
 URLS='
 {
-    "issuing_certificates": "https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/ca",
-    "crl_distribution_points": "https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/crl"
+    "issuing_certificates": "https://vault.$NAMESPACE.svc.cluster.local/v1/cabotage-ca/ca",
+    "crl_distribution_points": "https://vault.$NAMESPACE.svc.cluster.local/v1/cabotage-ca/crl"
 }
 '
 
@@ -43,17 +48,17 @@ DATA='
 }
 '
 
-kubectl exec -n vault $POD_NAME -c vault-server -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault read cabotage-ca/cert/ca" > /dev/null 2>&1
+kubectl exec -n $NAMESPACE $POD_NAME -c vault -- sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault read cabotage-ca/cert/ca" > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     echo "Internal CA already signed"
 else
     echo "configuring Internal CA..."
-    kubectl exec -n vault $POD_NAME -c vault-server -- \
+    kubectl exec -n $NAMESPACE $POD_NAME -c vault -- \
       sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write cabotage-ca/config/urls \
-        issuing_certificates='https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/ca' \
-        crl_distribution_points='https://vault-server.vault.svc.cluster.local/v1/cabotage-ca/crl'"
+        issuing_certificates='https://vault.$NAMESPACE.svc.cluster.local/v1/cabotage-ca/ca' \
+        crl_distribution_points='https://vault.$NAMESPACE.svc.cluster.local/v1/cabotage-ca/crl'"
     echo "generating Internal CA..."
-    kubectl exec -n vault $POD_NAME -c vault-server -- \
+    kubectl exec -n $NAMESPACE $POD_NAME -c vault -- \
       sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write -format=json cabotage-ca/intermediate/generate/internal \
         common_name='Kubernetes Internal Intermediate CA' \
         alt_names='infrastructure-staff@python.org' \
@@ -90,7 +95,7 @@ EOF
     echo "signing Internal CA with minikube CA..."
     CERT=$($GOPATH/bin/cfssl sign -config $cfssl_config -ca ~/.minikube/ca.crt -ca-key ~/.minikube/ca.key -profile intermediate cabotage.csr | jq '.cert')
     echo "providing signed Internal CA Certificate back to Vault PKI Backend"
-    kubectl exec -n vault $POD_NAME -c consul -- \
+    kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
       curl --silent --show-error --fail \
       --cacert $CA_CERT \
       --header "X-Vault-Token: $VAULT_TOKEN" \
@@ -100,5 +105,5 @@ fi
 
 echo "Summary of Internal Certificate Authority"
 echo ""
-kubectl exec -n vault $POD_NAME -c vault-server -- vault read -format=json cabotage-ca/cert/ca | jq -r '.data.certificate' | openssl x509 -noout -text -certopt no_header,no_version,no_serial,no_signame,no_pubkey,no_sigdump,no_aux
+kubectl exec -n $NAMESPACE $POD_NAME -c vault -- vault read -format=json cabotage-ca/cert/ca | jq -r '.data.certificate' | openssl x509 -noout -text -certopt no_header,no_version,no_serial,no_signame,no_pubkey,no_sigdump,no_aux
 echo ""

@@ -1,7 +1,7 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  namespace: vault
+  namespace: cabotage
   name: goldfish
   labels:
     app: goldfish
@@ -14,8 +14,8 @@ spec:
     spec:
       serviceAccountName: goldfish
       initContainers:
-        - name: kube-login
-          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+        - name: cabotage-enroller
+          image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
           env:
             - name: NAMESPACE
               valueFrom:
@@ -32,9 +32,9 @@ spec:
           args:
             - "kube_login"
             - "--namespace=$(NAMESPACE)"
-            - "--vault-auth-kubernetes-role=vault-goldfish"
+            - "--vault-auth-kubernetes-role=cabotage-goldfish"
             - "--fetch-cert"
-            - "--vault-pki-role=vault-goldfish"
+            - "--vault-pki-role=cabotage-goldfish"
             - "--pod-name=$(POD_NAME)"
             - "--pod-ip=$(POD_IP)"
             - "--service-names=goldfish"
@@ -42,11 +42,16 @@ spec:
             - name: vault-secrets
               mountPath: /var/run/secrets/vault
       containers:
-        - name: secure-sidecar
-          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
+        - name: cabotage-sidecar
+          image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           args:
             - "maintain"
-            - "--vault-pki-role=vault-goldfish"
+            - "--vault-pki-role=$(NAMESPACE)-goldfish"
           volumeMounts:
             - name: vault-secrets
               mountPath: /var/run/secrets/vault
