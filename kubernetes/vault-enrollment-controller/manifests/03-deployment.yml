@@ -14,7 +14,7 @@ spec:
     spec:
       serviceAccountName: vault-enrollment-controller
       initContainers:
-        - name: vault-token-requestor
+        - name: kube-login
           image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
           env:
             - name: NAMESPACE
@@ -23,8 +23,6 @@ spec:
                   fieldPath: metadata.namespace
           args:
             - "kube_login"
-            - "--namespace=$(NAMESPACE)"
-            - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
             - "--vault-kubernetes-auth-role=vault-enrollment-controller"
             - "--wrap"
           volumeMounts:
@@ -39,7 +37,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
           args:
-            - "fetch_and_renew"
+            - "maintain"
             - "--token-file=/var/run/secrets/vault/wrapped-vault-token"
             - "--write-token-file=/var/run/secrets/vault/vault-token"
             - "--unwrap"

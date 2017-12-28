@@ -8,8 +8,8 @@ data:
       listener "tcp" {
           address = "0.0.0.0:8000"
           tls_disable = 0
-          tls_cert_file = "/etc/tls/chain.pem"
-          tls_key_file = "/etc/tls/key.pem"
+          tls_cert_file = "/var/run/secrets/vault/chain.pem"
+          tls_key_file = "/var/run/secrets/vault/key.pem"
       }
       vault {
           address         = "https://vault-server.vault.svc.cluster.local"
@@ -39,24 +39,7 @@ spec:
     spec:
       serviceAccountName: goldfish
       initContainers:
-        - name: vault-token-requestor
-          image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
-          env:
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-          args:
-            - "kube_login"
-            - "--namespace=$(NAMESPACE)"
-            - "--vault-kubernetes-auth-role=goldfish"
-            - "--vault-kubernetes-auth-token-path=/var/run/secrets/vault"
-            - "--wrap"
-            - "--unwrap"
-          volumeMounts:
-            - name: vault-token
-              mountPath: /var/run/secrets/vault
-        - name: certificate-requestor
+        - name: kube-login
           image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
           env:
             - name: NAMESPACE
@@ -72,48 +55,28 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           args:
-            - "fetch_vault_cert"
-            - "--token-file=/var/run/secrets/vault/vault-token"
-            - "--vault-pki-role=vault-goldfish"
-            - "--additional-dnsnames=goldfish,goldfish.$(NAMESPACE),goldfish.$(NAMESPACE).svc.cluster.local"
-            - "--cert-dir=/etc/tls"
+            - "kube_login"
             - "--namespace=$(NAMESPACE)"
-            - "--pod-ip=$(POD_IP)"
+            - "--vault-auth-kubernetes-role=vault-goldfish"
+            - "--fetch-cert"
+            - "--vault-pki-role=vault-goldfish"
             - "--pod-name=$(POD_NAME)"
+            - "--pod-ip=$(POD_IP)"
             - "--service-names=goldfish"
           volumeMounts:
-            - name: tls
-              mountPath: /etc/tls
-            - name: vault-token
+            - name: vault-secrets
               mountPath: /var/run/secrets/vault
       containers:
         - name: secure-sidecar
           image: gcr.io/the-psf/secure-sidecar:v1.0.0a1
-          env:
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           args:
-            - "fetch_and_renew"
-            - "--token-file=/var/run/secrets/vault/vault-token"
+            - "maintain"
             - "--vault-pki-role=vault-goldfish"
           volumeMounts:
-            - name: tls
-              mountPath: /etc/tls
-            - name: vault-token
+            - name: vault-secrets
               mountPath: /var/run/secrets/vault
         - name: goldfish
           image: gcr.io/the-psf/goldfish:v1.0.0a1
-          env:
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           command: ['goldfish']
           args:
             - "-config=/etc/goldfish/config.hcl"
@@ -122,11 +85,9 @@ spec:
             - containerPort: 8000
               name: http
           volumeMounts:
-            - name: tls
-              mountPath: /etc/tls
             - name: goldfish-config
               mountPath: /etc/goldfish
-            - name: vault-token
+            - name: vault-secrets
               mountPath: /var/run/secrets/vault
           resources:
             limits:
@@ -138,11 +99,7 @@ spec:
               add:
               - IPC_LOCK
       volumes:
-        - name: tls
-          emptyDir:
-            medium: "Memory"
-            sizeLimit: "1M"
-        - name: vault-token
+        - name: vault-secrets
           emptyDir:
             medium: "Memory"
             sizeLimit: "1M"

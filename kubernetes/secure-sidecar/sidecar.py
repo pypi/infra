@@ -269,7 +269,7 @@ def cli():
 @click.option('--cluster-domain', default="cluster.local", help="kubernetes cluster domain")
 @click.option('--pod-name', help="name as defined by pod.metadata.name")
 @click.option('--pod-ip', help="pod IP address as defined by pod.status.podIP")
-@click.option('--additional-dns_names', default="", help="additional dns names; comma separated")
+@click.option('--additional-dns-names', default="", help="additional dns names; comma separated")
 @click.option('--service-names', default="", help="service names that resolve to this Pod; comma separated")
 @click.option('--service-ips', default="", help="service IP addresses that resolve to this Pod; comma separated")
 @click.option('--wrap/--no-wrap', default=True, help="Use Vault Response Wrapping when requesting tokens, etc")
@@ -299,7 +299,7 @@ def kube_login(namespace, vault_addr, vault_ca_file, vault_secrets_path,
         jwt = token_file.read()
 
     if vault_auth_kubernetes_role:
-        click.echo(f'Attempting Vault Auth Login with Kubernetes for {namespace}-{vault_auth_kubernetes_role}')
+        click.echo(f'Attempting Vault Auth Login with Kubernetes for {vault_auth_kubernetes_role}')
         click.echo('reading jwt for vault kubernetes auth')
         click.echo('fetching vault token')
         token = vault_auth_kubernetes_login(vault_ca_file, vault_addr,
