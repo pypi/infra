@@ -6,6 +6,7 @@ minikube start \
   --bootstrapper kubeadm \
   --docker-opt="default-ulimit=nofile=102400:102400" \
   --extra-config=controller-manager.cluster-signing-cert-file="/var/lib/localkube/certs/ca.crt" \
-  --extra-config=controller-manager.cluster-signing-key-file="/var/lib/localkube/certs/ca.key"
+  --extra-config=controller-manager.cluster-signing-key-file="/var/lib/localkube/certs/ca.key" \
+  --insecure-registry "10.0.0.0/24,192.168.99.0/24,registry:5000,10.0.2.2:5000,192.168.99.1:5000"
 
 minikube addons enable ingress
