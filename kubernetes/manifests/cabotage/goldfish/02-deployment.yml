@@ -33,8 +33,6 @@ spec:
             - "kube_login"
             - "--namespace=$(NAMESPACE)"
             - "--vault-auth-kubernetes-role=cabotage-goldfish"
-            - "--fetch-cert"
-            - "--vault-pki-role=cabotage-goldfish"
             - "--pod-name=$(POD_NAME)"
             - "--pod-ip=$(POD_IP)"
             - "--service-names=goldfish"
@@ -51,7 +49,6 @@ spec:
                   fieldPath: metadata.namespace
           args:
             - "maintain"
-            - "--vault-pki-role=$(NAMESPACE)-goldfish"
           volumeMounts:
             - name: vault-secrets
               mountPath: /var/run/secrets/vault

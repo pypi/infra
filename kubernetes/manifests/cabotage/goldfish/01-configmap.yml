@@ -8,8 +8,11 @@ data:
       listener "tcp" {
           address = "0.0.0.0:8000"
           tls_disable = 0
-          tls_cert_file = "/var/run/secrets/vault/chain.pem"
-          tls_key_file = "/var/run/secrets/vault/key.pem"
+          pki_certificate "pki" {
+              pki_path    = "/cabotage-ca/issue/cabotage-goldfish"
+              common_name = "goldfish.cabotage.svc.cluster.local"
+              alt_names   = ["goldfish.cabotage.svc", "goldfish.cabotage", "goldfish"]
+          }
       }
       vault {
           address         = "https://vault.cabotage.svc.cluster.local"
