@@ -1,0 +1,196 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: cabotage
+  name: minio
+  labels:
+    org.pypi.infra.vault-access: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: cabotage
+  name: minio
+  labels:
+    app: minio
+spec:
+  clusterIP: None
+  ports:
+    - port: 9000
+      name: minio
+  selector:
+    app: minio
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: cabotage
+  name: minio-scripts
+data:
+  write-links.sh: |
+    /bin/mkdir -p /root/.minio/certs/CAs
+    echo "made directory /root/.minio/certs/CAs"
+    /bin/ln -s /var/run/secrets/kubernetes.io/serviceaccount/ca.crt /root/.minio/certs/CAs/root.crt
+    ls -alhtr /root/.minio/certs/CAs/root.crt
+    echo "linked /var/run/secrets/kubernetes.io/serviceaccount/ca.crt /root/.minio/certs/CAs/root.crt"
+    /bin/ln -s /var/run/secrets/vault/chain.pem /root/.minio/certs/public.crt
+    echo "linked /var/run/secrets/vault/chain.pem /root/.minio/certs/public.crt"
+    ls -alhtr /root/.minio/certs/public.crt
+    /bin/ln -s /var/run/secrets/vault/key.pem /root/.minio/certs/private.key
+    echo "linked /var/run/secrets/vault/key.pem /root/.minio/certs/private.key"
+    ls -alhtr /root/.minio/certs/private.key
+    
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  namespace: cabotage
+  name: minio
+spec:
+  serviceName: minio
+  replicas: 4
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - minio
+              topologyKey: failure-domain.beta.kubernetes.io/zone
+      serviceAccountName: minio
+      initContainers:
+        - name: cabotage-enroller
+          image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          args:
+            - "kube_login"
+            - "--namespace=$(NAMESPACE)"
+            - "--vault-auth-kubernetes-role=cabotage-minio"
+            - "--fetch-cert"
+            - "--vault-pki-role=cabotage-minio"
+            - "--pod-name=$(POD_NAME)"
+            - "--pod-ip=$(POD_IP)"
+            - "--service-names=minio"
+            - "--hostname=$(POD_NAME)"
+            - "--subdomain=minio"
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /var/run/secrets/vault
+        - name: minio-script-runner
+          image: alpine:3.7
+          command: ['/bin/sh']
+          args: ['/opt/scripts/write-links.sh']
+          volumeMounts:
+            - name: minio-config
+              mountPath: /root/.minio
+            - name: minio-scripts
+              mountPath: /opt/scripts
+      containers:
+      - name: cabotage-sidecar
+        image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
+        env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        args:
+          - "maintain"
+          - "--vault-pki-role=cabotage-minio"
+        volumeMounts:
+          - name: vault-secrets
+            mountPath: /var/run/secrets/vault
+      - name: minio
+        env:
+        - name: MINIO_ACCESS_KEY
+          value: "MINIOACCESSKEY"
+        - name: MINIO_SECRET_KEY
+          value: "MINIOSECRETKEY"
+        image: minio/minio:latest
+        args:
+        - server
+        - https://minio-0.minio.cabotage.svc.cluster.local/data
+        - https://minio-1.minio.cabotage.svc.cluster.local/data
+        - https://minio-2.minio.cabotage.svc.cluster.local/data
+        - https://minio-3.minio.cabotage.svc.cluster.local/data
+        ports:
+        - containerPort: 9000
+        volumeMounts:
+        - name: minio-config
+          mountPath: /root/.minio
+        - name: data
+          mountPath: /data
+        - name: vault-secrets
+          mountPath: /var/run/secrets/vault
+      volumes:
+        - name: vault-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: minio-config
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: minio-scripts
+          configMap:
+            name: minio-scripts
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  namespace: cabotage
+  name: minio
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: minio
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  labels:
+    app: minio
+  name: minio-api
+  namespace: cabotage
+spec:
+  ports:
+  - name:
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app: minio
+  type: NodePort
