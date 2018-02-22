@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: cabotage
+  name: minio-scripts
+data:
+  write-links.sh: |
+    /bin/mkdir -p /root/.minio/certs/CAs
+    echo "made directory /root/.minio/certs/CAs"
+    /bin/ln -s /var/run/secrets/kubernetes.io/serviceaccount/ca.crt /root/.minio/certs/CAs/root.crt
+    ls -alhtr /root/.minio/certs/CAs/root.crt
+    echo "linked /var/run/secrets/kubernetes.io/serviceaccount/ca.crt /root/.minio/certs/CAs/root.crt"
+    /bin/ln -s /var/run/secrets/vault/chain.pem /root/.minio/certs/public.crt
+    echo "linked /var/run/secrets/vault/chain.pem /root/.minio/certs/public.crt"
+    ls -alhtr /root/.minio/certs/public.crt
+    /bin/ln -s /var/run/secrets/vault/key.pem /root/.minio/certs/private.key
+    echo "linked /var/run/secrets/vault/key.pem /root/.minio/certs/private.key"
+    ls -alhtr /root/.minio/certs/private.key
