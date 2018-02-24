@@ -1,0 +1,70 @@
+#!/bin/bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR
+
+NAMESPACE=cabotage
+
+command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
+
+FIRST_POD=($(kubectl get pod -n $NAMESPACE -l 'app=vault' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
+CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+POD_NAME=${FIRST_POD[0]}
+POD_IP=${FIRST_POD[1]}
+
+if [ -z $VAULT_TOKEN ]; then
+  echo "You must supply VAULT_TOKEN env var with root privileges"
+fi
+
+lookup_self_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/auth/token/lookup-self
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to get https://$POD_IP:8200/v1/auth/token/lookup-self... check service status and networking?"
+  echo $lookup_self_response
+  exit 1
+fi
+
+groups=($(echo "$lookup_self_response" | jq -r '.data.policies[]'))
+if ! [[ " ${groups[@]} " =~ " root " ]]; then
+  echo "You must supply VAULT_TOKEN env var with root privileges"
+  echo "Supplied VAULT_TOKEN does not have root policy" 
+  exit 1
+fi
+
+POLICY=$(python3 -c "import json; policy_doc = open('vault-policies/cabotage-app.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+create_policy_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    https://$POD_IP:8200/v1/sys/policy/cabotage-cabotage-app \
+    --data '{"rules": '"$POLICY"'}'
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to create cabotage-app Vault Policy"
+  echo $create_policy_response
+  exit 1
+fi
+echo "Successfully created vault policy for cabotage-app"
+
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
+  sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
+  vault unmount cabotage-app-transit" 
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
+  sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
+  vault mount \
+  -path cabotage-app-transit \
+  -description 'transit backend for cabotage-app'\
+  transit"
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
+  sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
+  vault write -f cabotage-app-transit/keys/registry \
+  type=ecdsa-p256"
+
+exit 0
