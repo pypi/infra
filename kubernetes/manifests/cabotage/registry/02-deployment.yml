@@ -1,0 +1,101 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  namespace: cabotage
+  name: registry
+  labels:
+    app: registry
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      serviceAccountName: registry
+      initContainers:
+        - name: cabotage-enroller
+          image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          args:
+            - "kube_login"
+            - "--namespace=$(NAMESPACE)"
+            - "--vault-auth-kubernetes-role=cabotage-registry"
+            - "--fetch-cert"
+            - "--vault-pki-role=cabotage-registry"
+            - "--pod-name=$(POD_NAME)"
+            - "--pod-ip=$(POD_IP)"
+            - "--service-names=registry"
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /var/run/secrets/vault
+      containers:
+        - name: cabotage-sidecar
+          image: gcr.io/the-psf/cabotage-sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "maintain"
+            - "--vault-pki-role=cabotage-registry"
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /var/run/secrets/vault
+        - name: registry
+          image: gcr.io/the-psf/registry:v1.0.0a1
+          env:
+            - name: REGISTRY_STORAGE_S3_ACCESSKEY
+              value: "MINIOACCESSKEY"
+            - name: REGISTRY_STORAGE_S3_SECRETKEY
+              value: "MINIOSECRETKEY"
+            - name: REGISTRY_STORAGE_S3_REGION
+              value: "us-east-1"
+            - name: REGISTRY_STORAGE_S3_REGIONENDPOINT
+              value: "https://minio.cabotage.svc.cluster.local:9000"
+            - name: REGISTRY_STORAGE_S3_BUCKET
+              value: "cabotage-registry"
+            - name: REGISTRY_STORAGE_S3_ENCRYPT
+              value: "false"
+            - name: REGISTRY_STORAGE_S3_KEYID
+              value: "mykeyid"
+            - name: REGISTRY_STORAGE_S3_SECURE
+              value: "true"
+            - name: REGISTRY_STORAGE_S3_V4AUTH
+              value: "true"
+            - name: REGISTRY_STORAGE_S3_CHUNKSIZE
+              value: "5242880"
+          args: ['/etc/docker/registry-local/config.yml']
+          ports:
+            - containerPort: 5000
+              name: http
+          volumeMounts:
+            - name: registry-config
+              mountPath: /etc/docker/registry-local
+            - name: vault-secrets
+              mountPath: /var/run/secrets/vault
+          resources:
+            limits:
+              memory: "50Mi"
+              cpu: "100m"
+      volumes:
+        - name: vault-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: registry-config
+          configMap:
+            name: registry-config

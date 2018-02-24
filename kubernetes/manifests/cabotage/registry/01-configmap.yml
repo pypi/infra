@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: cabotage
+  name: registry-config
+data:
+  config.yml: |
+    version: 0.1
+    auth:
+      token:
+        realm: http://192.168.99.1:8000/docker/auth
+        service: cabotage-registry
+        issuer: cabotage-app
+        rootcertbundle: /etc/docker/registry-local/public_key_bundle
+    log:
+      level: debug
+      fields:
+        service: registry
+    storage:
+      cache:
+        blobdescriptor: inmemory
+    http:
+      addr: :5000
+      tls:
+        certificate: /var/run/secrets/vault/chain.pem
+        key: /var/run/secrets/vault/key.pem
+      headers:
+        X-Content-Type-Options: [nosniff]
+  public_key_bundle: |
+    -----BEGIN CERTIFICATE-----
+    MIIBLDCB1KADAgECAhRGpaXYSTDowzwESrvF5ByYSGFquzAKBggqhkjOPQQDAjAX
+    MRUwEwYDVQQDDAxjYWJvdGFnZS1hcHAwHhcNMTgwMjIyMjA1ODQwWhcNMTkwMjIz
+    MjA1ODQwWjAXMRUwEwYDVQQDDAxjYWJvdGFnZS1hcHAwWTATBgcqhkjOPQIBBggq
+    hkjOPQMBBwNCAAT56aUT3Zmn9ekqwlBkrhHnyyb+4L3gqAV9lZWq59Go2Q8Plu3u
+    m4twqVEXnWtbArutWDsRBJ+VGhbzrXfxcf2TMAoGCCqGSM49BAMCA0cAMEQCIHu+
+    O9M1tFQpbm5V+VIZBK1D1t1gQIgvCVs9I9ql/vTUAiBcvJU85lLiX33ZDYzvGeCn
+    NFVMCKVndaRe9DPhcnNXdw==
+    -----END CERTIFICATE-----
