@@ -19,6 +19,8 @@ data:
     storage:
       cache:
         blobdescriptor: inmemory
+      redirect:
+        disable: true
     http:
       addr: :5000
       tls:
