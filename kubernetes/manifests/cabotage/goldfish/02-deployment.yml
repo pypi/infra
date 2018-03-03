@@ -75,6 +75,20 @@ spec:
             capabilities:
               add:
               - IPC_LOCK
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /#/
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              port: 8000
+              path: /#/
+              scheme: HTTPS
+            initialDelaySeconds: 15
+            periodSeconds: 20
       volumes:
         - name: vault-secrets
           emptyDir:
