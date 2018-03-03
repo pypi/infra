@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: default-http-backend
+  namespace: cabotage
+  labels:
+    app: default-http-backend
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: default-http-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: cabotage
+  labels:
+    app: httpbin
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: httpbin
