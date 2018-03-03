@@ -25,7 +25,7 @@ spec:
       serviceAccountName: vault
       initContainers:
         - name: certificate-requestor
-          image: gcr.io/the-psf/certificate-requestor:v1.0.0a1
+          image: cabotage/certificate-requestor:v1.0.0a1
           env:
             - name: NAMESPACE
               valueFrom:
