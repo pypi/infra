@@ -60,19 +60,22 @@ spec:
       containers:
       - name: httpbin
         image: kennethreitz/httpbin
+        env:
+          - name: WEB_CONCURRENCY
+            value: '2'
         livenessProbe:
           httpGet:
             path: /status/200
             port: 8080
             scheme: HTTP
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           timeoutSeconds: 5
         ports:
         - containerPort: 8080
         resources:
           limits:
-            cpu: 30m
-            memory: 150Mi
+            cpu: 100m
+            memory: 200Mi
           requests:
-            cpu: 30m
-            memory: 150Mi
+            cpu: 50m
+            memory: 200Mi
