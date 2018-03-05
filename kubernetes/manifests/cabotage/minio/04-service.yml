@@ -5,6 +5,8 @@ metadata:
   name: minio
   labels:
     app: minio
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
 spec:
   clusterIP: None
   ports:

@@ -66,7 +66,7 @@ spec:
             - name: REGISTRY_STORAGE_S3_SECRETKEY
               value: "MINIOSECRETKEY"
             - name: REGISTRY_STORAGE_S3_REGION
-              value: "us-east-1"
+              value: "us-east-2"
             - name: REGISTRY_STORAGE_S3_REGIONENDPOINT
               value: "https://minio.cabotage.svc.cluster.local:9000"
             - name: REGISTRY_STORAGE_S3_BUCKET

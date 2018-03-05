@@ -16,8 +16,10 @@ spec:
     spec:
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
                 matchExpressions:
                   - key: app
                     operator: In
@@ -84,7 +86,7 @@ spec:
           value: "MINIOACCESSKEY"
         - name: MINIO_SECRET_KEY
           value: "MINIOSECRETKEY"
-        image: minio/minio:latest
+        image: minio/minio@sha256:61c4299bf10a897d3e474d1714bc7307a7df0f2386d86a850135930bab868a7e  # edge on 2018-03-03, work around EBS/lost+found issue
         args:
         - server
         - https://minio-0.minio.cabotage.svc.cluster.local/data
@@ -120,4 +122,4 @@ spec:
         - ReadWriteOnce
       resources:
         requests:
-          storage: 10Gi
+          storage: 100Gi
