@@ -2,15 +2,15 @@ FROM python:3.6-slim-stretch
 
 ENV PYTHONUNBUFFERED 1
 
-ENV GHOSTUNNEL_FORK=ewdurbin
-ENV GHOSTUNNEL_VERSION=v1.2.0-ewdurbin-rc.1
-ENV GHOSTUNNEL_SHASUM=5c55a7da6ed37db00c90c89415dcc9ad0e3ec627b6ff29f9846d87e86d65cba0
+ENV GHOSTUNNEL_FORK=square
+ENV GHOSTUNNEL_VERSION=v1.2.0-rc.2
+ENV GHOSTUNNEL_SHASUM=2917dc65f664378ff023dc966a1725ef13b8decaf3590e24055be9061f222216
 
 RUN apt-get update && apt-get install wget -y && rm -rf /var/lib/apt/lists/*
 
-RUN wget --quiet https://github.com/${GHOSTUNNEL_FORK}/ghostunnel/releases/download/${GHOSTUNNEL_VERSION}/ghostunnel_${GHOSTUNNEL_VERSION}_linux_amd64.tgz
-RUN if [ "$(sha256sum ghostunnel_${GHOSTUNNEL_VERSION}_linux_amd64.tgz)" != "$GHOSTUNNEL_SHASUM  ghostunnel_${GHOSTUNNEL_VERSION}_linux_amd64.tgz" ]; then exit 1; fi
-RUN tar -xzf ghostunnel_${GHOSTUNNEL_VERSION}_linux_amd64.tgz && rm ghostunnel_${GHOSTUNNEL_VERSION}_linux_amd64.tgz
+RUN wget --quiet https://github.com/${GHOSTUNNEL_FORK}/ghostunnel/releases/download/${GHOSTUNNEL_VERSION}/ghostunnel-${GHOSTUNNEL_VERSION}-linux-amd64-with-pkcs11
+RUN if [ "$(sha256sum ghostunnel-${GHOSTUNNEL_VERSION}-linux-amd64-with-pkcs11)" != "$GHOSTUNNEL_SHASUM  ghostunnel-${GHOSTUNNEL_VERSION}-linux-amd64-with-pkcs11" ]; then exit 1; fi
+RUN mv ghostunnel-${GHOSTUNNEL_VERSION}-linux-amd64-with-pkcs11 ghostunnel
 
 RUN chmod +x ghostunnel
 

@@ -162,6 +162,11 @@ def write_key_material(cert_dir, cert_object):
     with open(os.path.join(cert_dir, 'cert.pem'), 'wb') as cert_file:
         cert_file.write(certificate.encode('utf-8'))
         cert_file.write(b'\n')
+    with open(os.path.join(cert_dir, 'combined.pem'), 'wb') as combined_file:
+        combined_file.write(private_key.encode('utf-8'))
+        combined_file.write(b'\n')
+        combined_file.write(certificate.encode('utf-8'))
+        combined_file.write(b'\n')
     with open(os.path.join(cert_dir, 'ca.pem'), 'wb') as ca_file:
         ca_file.write(issuing_ca.encode('utf-8'))
         ca_file.write(b'\n')
