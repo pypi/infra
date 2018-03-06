@@ -22,10 +22,7 @@ data:
       redirect:
         disable: true
     http:
-      addr: :5000
-      tls:
-        certificate: /var/run/secrets/vault/chain.pem
-        key: /var/run/secrets/vault/key.pem
+      addr: 0.0.0.0:4999
       headers:
         X-Content-Type-Options: [nosniff]
   public_key_bundle: |
