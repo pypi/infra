@@ -30,6 +30,7 @@ spec:
       initContainers:
         - name: cabotage-enroller
           image: cabotage/sidecar:v1.0.0a1
+          imagePullPolicy: Always
           env:
             - name: NAMESPACE
               valueFrom:
@@ -69,6 +70,7 @@ spec:
       containers:
       - name: cabotage-sidecar
         image: cabotage/sidecar:v1.0.0a1
+        imagePullPolicy: Always
         env:
           - name: NAMESPACE
             valueFrom:
@@ -86,7 +88,8 @@ spec:
           value: "MINIOACCESSKEY"
         - name: MINIO_SECRET_KEY
           value: "MINIOSECRETKEY"
-        image: minio/minio@sha256:61c4299bf10a897d3e474d1714bc7307a7df0f2386d86a850135930bab868a7e  # edge on 2018-03-03, work around EBS/lost+found issue
+        image: cabotage/minio:v1.0.0a1
+        imagePullPolicy: Always
         args:
         - server
         - https://minio-0.minio.cabotage.svc.cluster.local/data
