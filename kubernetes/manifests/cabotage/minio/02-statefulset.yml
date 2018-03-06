@@ -92,12 +92,31 @@ spec:
         imagePullPolicy: Always
         args:
         - server
+        - "--quiet"
         - https://minio-0.minio.cabotage.svc.cluster.local/data
         - https://minio-1.minio.cabotage.svc.cluster.local/data
         - https://minio-2.minio.cabotage.svc.cluster.local/data
         - https://minio-3.minio.cabotage.svc.cluster.local/data
         ports:
         - containerPort: 9000
+        livenessProbe:
+          httpGet:
+            path: /minio/index.html
+            port: 9000
+            scheme: HTTPS
+            httpHeaders:
+            - name: User-Agent
+              value: Mozilla
+          initialDelaySeconds: 10
+        readinessProbe:
+         httpGet:
+           path: /minio/index.html
+           port: 9000
+           scheme: HTTPS
+           httpHeaders:
+           - name: User-Agent
+             value: Mozilla
+         initialDelaySeconds: 10
         volumeMounts:
         - name: minio-config
           mountPath: /root/.minio
