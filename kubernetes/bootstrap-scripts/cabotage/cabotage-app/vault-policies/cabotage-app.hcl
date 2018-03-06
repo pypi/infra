@@ -5,3 +5,7 @@ path "cabotage-app-transit/*" {
 path "cabotage-ca/issue/cabotage-cabotage-app" {
   capabilities = ["create", "update"]
 }
+
+path "cabotage-postgresql/roles/cabotage_admin" {
+  capabilities = ["read"]
+}
