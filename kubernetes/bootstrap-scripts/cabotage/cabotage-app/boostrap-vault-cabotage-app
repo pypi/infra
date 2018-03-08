@@ -53,6 +53,23 @@ if [ $? -ne 0 ]; then
 fi
 echo "Successfully created vault policy for cabotage-app"
 
+POLICY=$(python3 -c "import json; policy_doc = open('consul-policies/cabotage-app.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+create_role_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    https://$POD_IP:8200/v1/cabotage-consul/roles/cabotage-cabotage-app \
+    --data '{"token_type": "client", "policy": "'"$(base64 <<< $POLICY)"'", "lease": "21600s"}'
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to create cabotage-app Vault Consul Role"
+  echo $create_role_response
+  exit 1
+fi
+echo "Successfully created vault consul role for cabotage-app"
+
 kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault secrets enable \
