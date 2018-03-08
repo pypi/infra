@@ -15,13 +15,13 @@ spec:
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:
-                      - vault
-              topologyKey: failure-domain.beta.kubernetes.io/zone
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - vault
+            topologyKey: kubernetes.io/hostname
       serviceAccountName: vault
       initContainers:
         - name: certificate-requestor
@@ -142,7 +142,7 @@ spec:
             - name: consul-data
               mountPath: /consul/data
         - name: vault
-          image: vault:0.9.0
+          image: vault:0.9.5
           imagePullPolicy: Always
           command: ["vault"]
           args:
