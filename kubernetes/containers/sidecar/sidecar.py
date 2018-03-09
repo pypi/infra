@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import os
 import pathlib
+import random
 import time
 
 import click
@@ -369,6 +370,7 @@ def maintain(vault_addr, vault_ca_file, vault_secrets_path, vault_token_file,
 
     while True:
         min_sleep = 60
+        max_sleep = 1800
         click.echo(f'checking vault token with accessor {vault_token_info["data"]["accessor"]}')
         vault_token_info = token_lookup_self(vault_ca_file, vault_addr, vault_token).json()
         if vault_token_info['data']['renewable']:
@@ -378,6 +380,7 @@ def maintain(vault_addr, vault_ca_file, vault_secrets_path, vault_token_file,
                 sleep = min_sleep
             else:
                 sleep = max(min_sleep, int(vault_token_info['data']['ttl']/4))
+                sleep = min(sleep, max_sleep) - random.randrange(0,120)
         for lease_dir in set([os.path.join(x, 'leases') for x  in [vault_secrets_path, consul_secrets_path, cert_dir]]):
             click.echo(f'Checking expiry of leases in {lease_dir}...')
             for lease_file in os.listdir(lease_dir):
