@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: cabotage-deployments
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cabotage-deployments
+subjects:
+- kind: ServiceAccount
+  namespace: cabotage
+  name: cabotage-app
