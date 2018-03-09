@@ -8,7 +8,7 @@ data:
     version: 0.1
     auth:
       token:
-        realm: http://192.168.99.1:8000/docker/auth
+        realm: https://cabotage-app.cabotage.svc.cluster.local:8443/docker/auth
         service: cabotage-registry
         issuer: cabotage-app
         rootcertbundle: /etc/docker/registry-local/public_key_bundle
@@ -21,8 +21,21 @@ data:
         blobdescriptor: inmemory
       redirect:
         disable: true
+      s3:
+        accesskey: MINIOACCESSKEY
+        secretkey: MINIOSECRETKEY
+        region: us-east-2
+        regionendpoint: https://minio.cabotage.svc.cluster.local:9000
+        bucket: cabotage-registry
+        encrypt: false
+        keyid: mykeyid
+        secure: true
+        v4auth: true
+        chunksize: "5242880"
     http:
       addr: 0.0.0.0:4999
+      secret: verysecure
+      host: https://registry.cabotage.svc.cluster.local:5000
       headers:
         X-Content-Type-Options: [nosniff]
   public_key_bundle: |

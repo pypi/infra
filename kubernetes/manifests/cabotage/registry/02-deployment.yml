@@ -1,19 +1,20 @@
-apiVersion: apps/v1beta2
-kind: DaemonSet
+apiVersion: apps/v1beta1
+kind: Deployment
 metadata:
-  name: registry-kubelet
+  name: registry
   namespace: cabotage
   labels:
-    app: registry-kubelet
+    app: registry
 spec:
+  replicas: 3
   selector:
     matchLabels:
-      app: registry-kubelet
+      app: registry
   template:
     metadata:
       labels:
-        app: registry-kubelet
-      name: registry-kubelet
+        app: registry
+      name: registry
     spec:
       serviceAccountName: registry
       initContainers:
@@ -75,7 +76,6 @@ spec:
               mountPath: /var/run/secrets/vault
           ports:
             - containerPort: 5000
-              hostPort: 5000
               name: https
           livenessProbe:
             httpGet:
@@ -89,15 +89,10 @@ spec:
               scheme: HTTPS
               port: 5000
             initialDelaySeconds: 10
-        - name: registry-kubelet
+        - name: registry
           image: cabotage/registry:v1.0.0a1
           imagePullPolicy: Always
           args: ['/etc/docker/registry-local/config.yml']
-          env:
-            - name: REGISTRY_AUTH_TOKEN_REALM
-              value: https://cabotage/docker/auth
-            - name: REGISTRY_HTTP_HOST
-              value: https://localhost:30000
           ports:
             - containerPort: 4999
               name: http
