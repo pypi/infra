@@ -79,7 +79,6 @@ spec:
         - name: builder
           image: cabotage/builder:v1.0.0a1
           imagePullPolicy: Always
-          command: ["dockerd"]
           args:
             - "--host=unix:///var/run/dockerd/docker.sock"
           securityContext:
@@ -87,6 +86,13 @@ spec:
           volumeMounts:
             - name: docker-sock
               mountPath: /var/run/dockerd
+          resources:
+            limits:
+              cpu: 400m
+              memory: 600Mi
+            requests:
+              cpu: 200m
+              memory: 300Mi
       volumes:
         - name: vault-secrets
           emptyDir:
