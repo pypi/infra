@@ -10,10 +10,10 @@ path "cabotage-consul/creds/cabotage-cabotage-app" {
   capabilities = ["read"]
 }
 
-path "cabotage-postgresql/roles/cabotage-app" {
+path "cabotage-postgresql/creds/cabotage-app" {
   capabilities = ["read"]
 }
 
-path "cabotage-secrets/automation" {
+path "cabotage-secrets/automation/*" {
   capabilities = ["create", "update", "delete", "list"]
 }

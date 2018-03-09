@@ -53,7 +53,6 @@ if [ $? -ne 0 ]; then
 fi
 echo "Successfully created vault policy for cabotage-app"
 
-POLICY=$(python3 -c "import json; policy_doc = open('consul-policies/cabotage-app.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
 create_role_response=$(
   kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
     curl --silent --show-error --fail \
@@ -61,7 +60,7 @@ create_role_response=$(
     --header "X-Vault-Token: $VAULT_TOKEN" \
     --request POST \
     https://$POD_IP:8200/v1/cabotage-consul/roles/cabotage-cabotage-app \
-    --data '{"token_type": "client", "policy": "'"$(base64 <<< $POLICY)"'", "lease": "21600s"}'
+    --data '{"token_type": "client", "policy": "'"$(base64 < consul-policies/cabotage-app.hcl)"'", "lease": "21600s"}'
 )
 if [ $? -ne 0 ]; then
   echo "Failed to create cabotage-app Vault Consul Role"
@@ -89,16 +88,15 @@ kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   database"
 kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
-  vault write -f cabotage-postgresql/config/cabotage-app \
+  vault write -f cabotage-postgresql/config/cabotage \
     plugin_name=postgresql-database-plugin \
     connection_url=\"postgresql://cabotage:$CABOTAGE_PG_PASSWORD@$CABOTAGE_PG_HOST:5432/cabotage\" \
-    allowed_roles=\"cabotage\""
+    allowed_roles=\"cabotage-app\""
 kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault write -f cabotage-postgresql/roles/cabotage-app \
     db_name=cabotage default_ttl=\"1h\" max_ttl=\"24h\" \
-    creation_statements=\"CREATE ROLE \\\"{{name}}\\\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' IN ROLE cabotage;\" \
-    revocation_statements=\"REASSIGN OWNED BY \\\"{{name}}\\\" TO cabotage\""
+    creation_statements=\"CREATE ROLE \\\"{{name}}\\\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' IN ROLE cabotage;\"" 
 kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
   sh -c "VAULT_TOKEN="$VAULT_TOKEN" \
   vault read cabotage-postgresql/roles/cabotage-app "
