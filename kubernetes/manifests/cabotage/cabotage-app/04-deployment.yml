@@ -79,6 +79,18 @@ spec:
           ports:
             - containerPort: 8443
               name: https
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 5
         - name: redis
           image: redis:3.2
         - name: cabotage-app
