@@ -155,8 +155,6 @@ def write_key_material(cert_dir, cert_object):
     certificate = cert_object['data'].get('certificate')
     issuing_ca = cert_object['data'].get('issuing_ca')
     lease_sha = hashlib.sha256(lease_id.encode('utf-8')).hexdigest()
-    with open(os.path.join(cert_dir, 'leases', lease_sha), 'wb') as lease_file:
-        lease_file.write(lease_id.encode('utf-8'))
     with open(os.path.join(cert_dir, 'key.pem'), 'wb') as key_file:
         key_file.write(private_key.encode('utf-8'))
         key_file.write(b'\n')
@@ -185,8 +183,9 @@ def certificate_needs_renewed(cert_dir):
     with open(os.path.join(cert_dir, 'cert.pem'), 'rb') as cert_file:
         pem_data = cert_file.read()
     cert = x509.load_pem_x509_certificate(pem_data, default_backend())
+    not_valid_before = cert.not_valid_before
     not_valid_after = cert.not_valid_after
-    return not_valid_after - datetime.datetime.utcnow() < datetime.timedelta(hours=12)
+    return not_valid_after - datetime.datetime.utcnow() < (cert.not_valid_after - cert.not_valid_before)/2
 
 
 def read_cert(cert_dir):
@@ -388,6 +387,8 @@ def maintain(vault_addr, vault_ca_file, vault_secrets_path, vault_token_file,
                 with open(os.path.join(lease_dir, lease_file), 'rU') as f:
                     lease_id = f.read()
                 lease_info = leases_lookup(vault_ca_file, vault_addr, vault_token, lease_id).json()['data']
+                if lease_info['id'].startswith(f'{vault_pki_backend}/issue'):
+                    continue
                 if lease_info['ttl'] > 0:
                     initial_ttl = iso8601.parse_date(lease_info['expire_time']) - iso8601.parse_date(lease_info['issue_time'])
                     if lease_info['ttl'] < int(initial_ttl.total_seconds() / 2):
