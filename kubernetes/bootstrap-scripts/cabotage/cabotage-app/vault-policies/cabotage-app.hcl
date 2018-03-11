@@ -17,3 +17,7 @@ path "cabotage-postgresql/creds/cabotage-app" {
 path "cabotage-secrets/automation/*" {
   capabilities = ["create", "update", "delete", "list"]
 }
+
+path "cabotage-secrets/build-automation/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
