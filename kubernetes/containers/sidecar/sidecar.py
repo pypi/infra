@@ -399,7 +399,7 @@ def maintain(vault_addr, vault_ca_file, vault_secrets_path, vault_token_file,
                     os.remove(os.path.join(lease_dir, lease_file))
         if os.path.exists(os.path.join(cert_dir, 'cert.pem')):
             if certificate_needs_renewed(cert_dir):
-                fetch_certificate(vault_addr, vault_token, vault_ca_file, vault_pki_backend, vault_pki_role, cert_dir)
+                vault_fetch_certificate(vault_addr, vault_token, vault_ca_file, vault_pki_backend, vault_pki_role, cert_dir, from_cert=True)
         click.echo(f'sleeping {sleep} seconds...')
         time.sleep(sleep)
 
