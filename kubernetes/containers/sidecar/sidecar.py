@@ -157,25 +157,17 @@ def write_key_material(cert_dir, cert_object):
     lease_sha = hashlib.sha256(lease_id.encode('utf-8')).hexdigest()
     with open(os.path.join(cert_dir, 'key.pem'), 'wb') as key_file:
         key_file.write(private_key.encode('utf-8'))
-        key_file.write(b'\n')
     with open(os.path.join(cert_dir, 'cert.pem'), 'wb') as cert_file:
         cert_file.write(certificate.encode('utf-8'))
-        cert_file.write(b'\n')
     with open(os.path.join(cert_dir, 'combined.pem'), 'wb') as combined_file:
         combined_file.write(certificate.encode('utf-8'))
-        combined_file.write(b'\n')
         combined_file.write(issuing_ca.encode('utf-8'))
-        combined_file.write(b'\n')
         combined_file.write(private_key.encode('utf-8'))
-        combined_file.write(b'\n')
     with open(os.path.join(cert_dir, 'ca.pem'), 'wb') as ca_file:
         ca_file.write(issuing_ca.encode('utf-8'))
-        ca_file.write(b'\n')
     with open(os.path.join(cert_dir, 'chain.pem'), 'wb') as chain_file:
         chain_file.write(certificate.encode('utf-8'))
-        chain_file.write(b'\n')
         chain_file.write(issuing_ca.encode('utf-8'))
-        chain_file.write(b'\n')
     click.echo(f'Wrote Key Material to {os.path.join(cert_dir, "{cert.pem, key.pem, ca.pem, chain.pem}")}')
 
 
