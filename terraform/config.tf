@@ -3,6 +3,12 @@ provider "aws" {
   profile = "psf-prod"
 }
 
+provider "aws" {
+  alias   = "oregon"
+  region  = "us-west-2"
+  profile = "psf-prod"
+}
+
 
 terraform {
   backend "s3" {
