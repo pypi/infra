@@ -12,12 +12,28 @@ resource "aws_ses_domain_identity" "primary" {
 }
 
 
+resource "aws_ses_domain_dkim" "primary" {
+  provider = "aws.email"
+  domain = "${aws_ses_domain_identity.primary.domain}"
+}
+
+
 resource "aws_route53_record" "primary_amazonses_verification_record" {
   zone_id = "${var.zone_id}"
   name    = "_amazonses.${var.domain}"
   type    = "TXT"
   ttl     = "1800"
   records = ["${aws_ses_domain_identity.primary.verification_token}"]
+}
+
+
+resource "aws_route53_record" "primary_amazonses_dkim_record" {
+  count   = 3
+  zone_id = "${var.zone_id}"
+  name    = "${element(aws_ses_domain_dkim.primary.dkim_tokens, count.index)}._domainkey.${var.domain}"
+  type    = "CNAME"
+  ttl     = "1800"
+  records = ["${element(aws_ses_domain_dkim.primary.dkim_tokens, count.index)}.dkim.amazonses.com"]
 }
 
 
