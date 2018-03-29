@@ -56,3 +56,12 @@ resource "aws_sns_topic_subscription" "sns-topic" {
   protocol  = "sqs"
   endpoint  = "${aws_sqs_queue.delivery-events.arn}"
 }
+
+
+# TODO: We can't setup the default sending policy for a SES domain yet, because this
+#       functionality doesn't exist in Terraform yet. THere is an open issue to add
+#       this (https://github.com/terraform-providers/terraform-provider-aws/issues/931)
+#       along with a PR that does the actuak work
+#       (https://github.com/terraform-providers/terraform-provider-aws/pull/2640).
+#       However, until those get added we're going to have to manually configure the
+#       SES domain to send the requisete events to our SNS topic.
