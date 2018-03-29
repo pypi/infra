@@ -8,7 +8,7 @@ module "email" {
   source = "./email"
   providers = {
     "aws" = "aws"
-    "aws.email" = "aws.oregon"
+    "aws.email" = "aws.us-west-2"
   }
 
   domain = "pypi.org"

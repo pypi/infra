@@ -4,7 +4,7 @@ provider "aws" {
 }
 
 provider "aws" {
-  alias   = "oregon"
+  alias   = "us-west-2"
   region  = "us-west-2"
   profile = "psf-prod"
 }
