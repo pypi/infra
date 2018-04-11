@@ -42,6 +42,23 @@ resource "aws_sns_topic" "delivery-events" {
   provider = "aws.email"
   name = "pypi-ses-delivery-events-topic"
   display_name = "PyPI SES Delivery Events"
+
+  delivery_policy = <<EOF
+{
+  "http": {
+    "defaultHealthyRetryPolicy": {
+      "minDelayTarget": 5,
+      "maxDelayTarget": 30,
+      "numRetries": 100,
+      "numMaxDelayRetries": 25,
+      "numNoDelayRetries": 5,
+      "numMinDelayRetries": 5,
+      "backoffFunction": "exponential"
+    },
+    "disableSubscriptionOverrides": false
+  }
+}
+EOF
 }
 
 
