@@ -1,7 +1,17 @@
+variable "zone_id" { type = "string" }
 variable "domain" { type = "string" }
 variable "conveyor_address" { type = "string" }
 variable "files_bucket" { type = "string" }
 variable "linehaul" { type = "map" }
+
+
+resource "aws_route53_record" "files" {
+  zone_id = "${var.zone_id}"
+  name    = "${var.domain}"
+  type    = "CNAME"
+  ttl     = 60
+  records = ["http2.python.map.fastly.net"]
+}
 
 
 resource "fastly_service_v1" "files" {
