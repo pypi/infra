@@ -1,3 +1,6 @@
+variable "linehaul_token" { type = "string" }
+
+
 locals {
   tags = {
     Application = "PyPI"
@@ -26,6 +29,21 @@ module "email" {
   zone_id  = "${module.dns.primary_zone_id}"
   domain   = "pypi.org"
   hook_url = "https://pypi.org/_/ses-hook/"
+}
+
+
+module "file-hosting" {
+  source = "./file-hosting"
+
+  domain           = "files.pythonhosted.org"
+  conveyor_address = "conveyor.cmh1.psfhosted.org"
+  files_bucket     = "pypi-files"
+
+  linehaul = {
+    address = "linehaul01.iad1.psf.io"
+    port    = 48175
+    token   = "${var.linehaul_token}"
+  }
 }
 
 
