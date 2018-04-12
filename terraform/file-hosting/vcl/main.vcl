@@ -56,8 +56,6 @@ sub vcl_recv {
         # Compute the Authorization header that S3 requires to be able to
         # access the files stored there.
         set req.http.Authorization = "AWS " var.AWS-Access-Key-ID ":" digest.hmac_sha1_base64(var.AWS-Secret-Access-Key, "GET" LF LF LF req.http.Date LF "/" var.S3-Bucket-Name req.url.path);
-    } else {
-        set req.http.Host = "files.pythonhosted.org";
     }
 
     # Do not bother to attempt to run the caching mechanisms for methods that
