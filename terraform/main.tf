@@ -1,5 +1,15 @@
+locals {
+  tags = {
+    Application = "PyPI"
+    Environment = "Production"
+  }
+}
+
+
 module "dns" {
   source = "./dns"
+
+  tags = "${local.tags}"
 
   primary_domain = "pypi.org"
   user_content_domain = "pythonhosted.org"
