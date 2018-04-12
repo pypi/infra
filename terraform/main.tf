@@ -11,6 +11,9 @@ module "email" {
     "aws.email" = "aws.us-west-2"
   }
 
-  domain = "pypi.org"
-  zone_id = "${module.dns.zone_id}"
+  zone_id  = "${module.dns.zone_id}"
+  domain   = "pypi.org"
+  hook_url = "https://pypi.org/_/ses-hook/"
 }
+
+output "ses_delivery_topic" { value = "${module.email.delivery_topic}" }

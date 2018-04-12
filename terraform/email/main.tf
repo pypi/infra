@@ -4,6 +4,7 @@ provider "aws" { alias = "email" }
 
 variable "domain" { type = "string" }
 variable "zone_id" { type = "string" }
+variable "hook_url" { type = "string" }
 
 
 resource "aws_ses_domain_identity" "primary" {
@@ -41,20 +42,32 @@ resource "aws_sns_topic" "delivery-events" {
   provider = "aws.email"
   name = "pypi-ses-delivery-events-topic"
   display_name = "PyPI SES Delivery Events"
+
+  delivery_policy = <<EOF
+{
+  "http": {
+    "defaultHealthyRetryPolicy": {
+      "minDelayTarget": 5,
+      "maxDelayTarget": 30,
+      "numRetries": 100,
+      "numMaxDelayRetries": 25,
+      "numNoDelayRetries": 5,
+      "numMinDelayRetries": 5,
+      "backoffFunction": "exponential"
+    },
+    "disableSubscriptionOverrides": false
+  }
+}
+EOF
 }
 
 
-resource "aws_sqs_queue" "delivery-events" {
-  name                       = "pypi-ses-delivery-events"
-  visibility_timeout_seconds = 300
-}
-
-
-resource "aws_sns_topic_subscription" "sns-topic" {
-  provider  = "aws.email"
-  topic_arn = "${aws_sns_topic.delivery-events.arn}"
-  protocol  = "sqs"
-  endpoint  = "${aws_sqs_queue.delivery-events.arn}"
+resource "aws_sns_topic_subscription" "delivery-events" {
+    provider  = "aws.email"
+    topic_arn = "${aws_sns_topic.delivery-events.arn}"
+    protocol  = "https"
+    endpoint  = "${var.hook_url}"
+    endpoint_auto_confirms = true
 }
 
 
@@ -65,3 +78,6 @@ resource "aws_sns_topic_subscription" "sns-topic" {
 #       (https://github.com/terraform-providers/terraform-provider-aws/pull/2640).
 #       However, until those get added we're going to have to manually configure the
 #       SES domain to send the requisete events to our SNS topic.
+
+
+output "delivery_topic" { value = "${aws_sns_topic.delivery-events.arn}" }
