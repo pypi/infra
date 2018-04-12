@@ -16,4 +16,5 @@ module "email" {
   hook_url = "https://pypi.org/_/ses-hook/"
 }
 
+
 output "ses_delivery_topic" { value = "${module.email.delivery_topic}" }
