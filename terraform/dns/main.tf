@@ -1,3 +1,4 @@
+variable "tags" { type = "map" }
 variable "primary_domain" { type = "string" }
 variable "user_content_domain" { type = "string" }
 
@@ -8,12 +9,14 @@ resource "aws_route53_delegation_set" "ns" {}
 resource "aws_route53_zone" "primary" {
   name              = "${var.primary_domain}"
   delegation_set_id = "${aws_route53_delegation_set.ns.id}"
+  tags              = "${var.tags}"
 }
 
 
 resource "aws_route53_zone" "user_content" {
-  name = "${var.user_content_domain}"
+  name              = "${var.user_content_domain}"
   delegation_set_id = "${aws_route53_delegation_set.ns.id}"
+  tags              = "${var.tags}"
 }
 
 
