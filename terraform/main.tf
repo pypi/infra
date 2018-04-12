@@ -35,6 +35,7 @@ module "email" {
 module "file-hosting" {
   source = "./file-hosting"
 
+  zone_id          = "${module.dns.user_content_zone_id}"
   domain           = "files.pythonhosted.org"
   conveyor_address = "conveyor.cmh1.psfhosted.org"
   files_bucket     = "pypi-files"
