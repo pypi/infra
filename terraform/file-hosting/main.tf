@@ -10,7 +10,7 @@ resource "aws_route53_record" "files" {
   name    = "${var.domain}"
   type    = "CNAME"
   ttl     = 60
-  records = ["r.shared.global.fastly.net"]
+  records = ["dualstack.r.ssl.global.fastly.net"]
 }
 
 
