@@ -48,5 +48,14 @@ module "file-hosting" {
 }
 
 
+module "docs-hosting" {
+  source = "./docs-hosting"
+
+  zone_id          = "${module.dns.user_content_zone_id}"
+  domain           = "pythonhosted.org"
+  conveyor_address = "conveyor.cmh1.psfhosted.org"
+}
+
+
 output "nameservers" { value = ["${module.dns.nameservers}"] }
 output "ses_delivery_topic" { value = "${module.email.delivery_topic}" }
