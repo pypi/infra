@@ -20,7 +20,7 @@ locals {
   }
   domain_map {
     pypi.org                    = "python.map.fastly.net"
-    temp.pypi.org               = "r.ssl.fastly.net"
+    pythonhosted.org            = "r.ssl.fastly.net"
   }
 }
 
@@ -89,6 +89,9 @@ module "docs-hosting" {
   zone_id          = "${module.dns.user_content_zone_id}"
   domain           = "pythonhosted.org"
   conveyor_address = "conveyor.cmh1.psfhosted.org"
+
+  fastly_endpoints = "${local.fastly_endpoints}"
+  domain_map       = "${local.domain_map}"
 }
 
 
