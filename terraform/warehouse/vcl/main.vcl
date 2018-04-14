@@ -1,7 +1,4 @@
 sub vcl_recv {
-    # Temporary, we need to set the host.
-    set req.http.Host = "pypi.org";
-
     # I'm not 100% sure on what this is exactly for, it was taken from the
     # Fastly documentation, however, what I *believe* it does is just ensure
     # that we don't serve a stale copy of the page from the shield node when

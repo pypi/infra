@@ -56,8 +56,7 @@ resource "fastly_service_v1" "pypi" {
   healthcheck {
     name   = "Application Health"
 
-    # host   = "${var.domain}"
-    host   = "pypi.org"
+    host   = "${var.domain}"
     method = "GET"
     path   = "/_health/"
   }
@@ -65,8 +64,7 @@ resource "fastly_service_v1" "pypi" {
   healthcheck {
     name   = "Mirror Health"
 
-    # host   = "${var.domain}"
-    host   = "pypi.org"
+    host   = "${var.domain}"
     method = "GET"
     path   = "/last-modified"
   }
