@@ -21,6 +21,7 @@ locals {
   domain_map {
     pypi.org                    = "python.map.fastly.net"
     pythonhosted.org            = "r.ssl.fastly.net"
+    files.pythonhosted.org      = "r.ssl.fastly.net"
   }
 }
 
@@ -80,6 +81,9 @@ module "file-hosting" {
     port    = 48175
     token   = "${var.linehaul_token}"
   }
+
+  fastly_endpoints = "${local.fastly_endpoints}"
+  domain_map       = "${local.domain_map}"
 }
 
 

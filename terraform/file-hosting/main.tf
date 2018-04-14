@@ -4,13 +4,12 @@ variable "conveyor_address" { type = "string" }
 variable "files_bucket" { type = "string" }
 variable "linehaul" { type = "map" }
 
+variable "fastly_endpoints" { type = "map" }
+variable "domain_map" { type = "map" }
 
-resource "aws_route53_record" "files" {
-  zone_id = "${var.zone_id}"
-  name    = "${var.domain}"
-  type    = "CNAME"
-  ttl     = 60
-  records = ["dualstack.r.ssl.global.fastly.net"]
+
+locals {
+  apex_domain = "${length(split(".", var.domain)) > 2 ? false : true}"
 }
 
 
@@ -82,4 +81,24 @@ resource "fastly_service_v1" "files" {
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
+}
+
+
+resource "aws_route53_record" "files" {
+  zone_id = "${var.zone_id}"
+  name    = "${var.domain}"
+  type    = "${local.apex_domain ? "A" : "CNAME"}"
+  ttl     = 60
+  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
+}
+
+
+resource "aws_route53_record" "files-ipv6" {
+  count = "${local.apex_domain ? 1 : 0}"
+
+  zone_id = "${var.zone_id}"
+  name    = "${var.domain}"
+  type    = "AAAA"
+  ttl     = 60
+  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], "AAAA"))}"]}"]
 }
