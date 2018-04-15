@@ -2,6 +2,7 @@ variable "zone_id" { type = "string" }
 variable "domain" { type = "string" }
 variable "conveyor_address" { type = "string" }
 variable "files_bucket" { type = "string" }
+variable "mirror" { type = "string" }
 variable "linehaul" { type = "map" }
 
 variable "fastly_endpoints" { type = "map" }
@@ -37,6 +38,7 @@ resource "fastly_service_v1" "files" {
     shield            = "sea-wa-us"
 
     request_condition = "Package File"
+    healthcheck       = "S3 Health"
 
     address           = "${var.files_bucket}.s3.amazonaws.com"
     port              = 443
@@ -44,6 +46,38 @@ resource "fastly_service_v1" "files" {
     ssl_cert_hostname = "${var.files_bucket}.s3.amazonaws.com"
     ssl_sni_hostname  = "${var.files_bucket}.s3.amazonaws.com"
   }
+
+  backend {
+    name              = "Mirror"
+    auto_loadbalance  = false
+    shield            = "london_city-uk"
+
+    request_condition = "Primary Failure (Mirror-able)"
+    healthcheck       = "Mirror Health"
+
+    address           = "${var.mirror}"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.mirror}"
+    ssl_sni_hostname  = "${var.mirror}"
+  }
+
+  healthcheck {
+    name   = "S3 Health"
+
+    host   = "${var.files_bucket}.s3.amazonaws.com"
+    method = "GET"
+    path   = "/_health.txt"
+  }
+
+  healthcheck {
+    name   = "Mirror Health"
+
+    host   = "${var.domain}"
+    method = "GET"
+    path   = "/last-modified"
+  }
+
 
   vcl {
     name    = "Main"
@@ -73,7 +107,14 @@ resource "fastly_service_v1" "files" {
     name      = "Package File"
     type      = "REQUEST"
     statement = "req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
-    priority  = 5
+    priority  = 1
+  }
+
+  condition {
+    name      = "Primary Failure (Mirror-able)"
+    type      = "REQUEST"
+    statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
+    priority  = 2
   }
 
   condition {

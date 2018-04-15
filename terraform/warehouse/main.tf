@@ -102,7 +102,7 @@ resource "fastly_service_v1" "pypi" {
   condition {
     name      = "Primary Failure (Mirror-able)"
     type      = "REQUEST"
-    statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/(simple|packages)/\""
+    statement = "(!req.backend.healthy || req.restarts > 0) && (req.url ~ \"^/simple/\" || req.url ~ \"^/pypi/[^/]+(/[^/]+)?/json$\")"
     priority  = 1
   }
 
