@@ -75,6 +75,7 @@ module "file-hosting" {
   domain           = "files.pythonhosted.org"
   conveyor_address = "conveyor.cmh1.psfhosted.org"
   files_bucket     = "pypi-files"
+  mirror           = "mirror.dub1.pypi.io"
 
   linehaul = {
     address = "linehaul01.iad1.psf.io"
