@@ -89,15 +89,17 @@ resource "fastly_service_v1" "pypi" {
     path           = "/pypi-org/%Y/%m/%d/"
   }
 
-  response_object {
-    name              = "Backend Down"
-    request_condition = "Backend Failure (General)"
-
-    status            = 503
-    response          = "Service Unavailable"
-    content           = "${file("${path.module}/html/error.html")}"
-    content_type      = "text/html; charset=utf-8"
-  }
+  # TODO: Re-enable this. It's being disabled temporarily to see if it is the cause
+  #       of the increased 503 errors.
+  # response_object {
+  #   name              = "Backend Down"
+  #   request_condition = "Backend Failure (General)"
+  #
+  #   status            = 503
+  #   response          = "Service Unavailable"
+  #   content           = "${file("${path.module}/html/error.html")}"
+  #   content_type      = "text/html; charset=utf-8"
+  # }
 
   condition {
     name      = "Primary Failure (Mirror-able)"
