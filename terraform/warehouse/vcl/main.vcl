@@ -164,12 +164,19 @@ sub vcl_fetch {
         set beresp.cacheable = true;
     }
 
-    # For any 5xx status code we want to see if a stale object exists for it,
-    # if so we'll go ahead and serve it.
+    # Handle 5XX (or any other unwanted status code)
     if (beresp.status >= 500 && beresp.status < 600) {
+        # Deliver stale if the object is available
         if (stale.exists) {
             return(deliver_stale);
         }
+
+        if (req.restarts < 1 && (req.request == "GET" || req.request == "HEAD")) {
+            restart;
+        }
+
+        # Else go to vcl_error to deliver a synthetic
+        error 503;
     }
 
 
@@ -283,6 +290,10 @@ sub vcl_error {
         if (stale.exists) {
             return(deliver_stale);
         }
+
+        set obj.http.Content-Type = "text/html; charset=utf-8";
+        synthetic {"${pretty_503}"};
+        return(deliver);
     }
 
     if (obj.status == 803) {
