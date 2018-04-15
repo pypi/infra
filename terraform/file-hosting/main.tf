@@ -104,17 +104,17 @@ resource "fastly_service_v1" "files" {
   }
 
   condition {
-    name      = "Primary Failure (Mirror-able)"
+    name      = "Package File"
     type      = "REQUEST"
-    statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
+    statement = "req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
     priority  = 1
   }
 
   condition {
-    name      = "Package File"
+    name      = "Primary Failure (Mirror-able)"
     type      = "REQUEST"
-    statement = "req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
-    priority  = 5
+    statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
+    priority  = 2
   }
 
   condition {
