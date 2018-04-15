@@ -59,6 +59,12 @@ resource "fastly_service_v1" "pypi" {
     host   = "${var.domain}"
     method = "GET"
     path   = "/_health/"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
   }
 
   healthcheck {
@@ -89,17 +95,15 @@ resource "fastly_service_v1" "pypi" {
     path           = "/pypi-org/%Y/%m/%d/"
   }
 
-  # TODO: Re-enable this. It's being disabled temporarily to see if it is the cause
-  #       of the increased 503 errors.
-  # response_object {
-  #   name              = "Backend Down"
-  #   request_condition = "Backend Failure (General)"
-  #
-  #   status            = 503
-  #   response          = "Service Unavailable"
-  #   content           = "${file("${path.module}/html/error.html")}"
-  #   content_type      = "text/html; charset=utf-8"
-  # }
+  response_object {
+    name              = "Backend Down"
+    request_condition = "Backend Failure (General)"
+
+    status            = 503
+    response          = "Service Unavailable"
+    content           = "${file("${path.module}/html/error.html")}"
+    content_type      = "text/html; charset=utf-8"
+  }
 
   condition {
     name      = "Primary Failure (Mirror-able)"
