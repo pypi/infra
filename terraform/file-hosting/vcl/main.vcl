@@ -79,13 +79,18 @@ sub vcl_fetch {
         set beresp.cacheable = true;
     }
 
-    # For any 5xx status code we want to see if a stale object exists for it,
-    # if so we'll go ahead and serve it.
+    # Handle 5XX (or any other unwanted status code)
     if (beresp.status >= 500 && beresp.status < 600) {
+        # Deliver stale if the object is available
         if (stale.exists) {
             return(deliver_stale);
         }
+
+        if (req.restarts < 1 && (req.request == "GET" || req.request == "HEAD")) {
+            restart;
+        }
     }
+
 
 #FASTLY fetch
 
@@ -116,6 +121,20 @@ sub vcl_fetch {
         set beresp.ttl = 1s;
         set beresp.grace = 5s;
         return (deliver);
+    }
+
+    return(deliver);
+}
+
+
+
+sub vcl_hit {
+#FASTLY hit
+
+    # If the object we have isn't cacheable, then just serve it directly
+    # without going through any of the caching mechanisms.
+    if (!obj.cacheable) {
+        return(pass);
     }
 
     return(deliver);

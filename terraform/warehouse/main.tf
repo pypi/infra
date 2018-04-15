@@ -14,6 +14,15 @@ locals {
 }
 
 
+data "template_file" "main_vcl" {
+  template = "${file("${path.module}/vcl/main.vcl")}"
+
+  vars {
+    pretty_503 = "${file("${path.module}/html/error.html")}"
+  }
+}
+
+
 resource "fastly_service_v1" "pypi" {
   name = "PyPI"
 
@@ -77,7 +86,7 @@ resource "fastly_service_v1" "pypi" {
 
   vcl {
     name    = "Main"
-    content = "${file("${path.module}/vcl/main.vcl")}"
+    content = "${data.template_file.main_vcl.rendered}"
     main    = true
   }
 
@@ -95,28 +104,11 @@ resource "fastly_service_v1" "pypi" {
     path           = "/pypi-org/%Y/%m/%d/"
   }
 
-  response_object {
-    name              = "Backend Down"
-    request_condition = "Backend Failure (General)"
-
-    status            = 503
-    response          = "Service Unavailable"
-    content           = "${file("${path.module}/html/error.html")}"
-    content_type      = "text/html; charset=utf-8"
-  }
-
   condition {
     name      = "Primary Failure (Mirror-able)"
     type      = "REQUEST"
     statement = "(!req.backend.healthy || req.restarts > 0) && (req.url ~ \"^/simple/\" || req.url ~ \"^/pypi/[^/]+(/[^/]+)?/json$\")"
     priority  = 1
-  }
-
-  condition {
-    name      = "Backend Failure (General)"
-    type      = "REQUEST"
-    statement = "!req.backend.healthy"
-    priority  = 2
   }
 }
 
