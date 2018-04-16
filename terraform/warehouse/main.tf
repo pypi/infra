@@ -82,6 +82,12 @@ resource "fastly_service_v1" "pypi" {
     host   = "${var.domain}"
     method = "GET"
     path   = "/last-modified"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
   }
 
   vcl {
@@ -104,11 +110,34 @@ resource "fastly_service_v1" "pypi" {
     path           = "/pypi-org/%Y/%m/%d/"
   }
 
+  s3logging {
+    name           = "S3 Error Logs"
+
+    format         = "%h \"%{now}V\" %l \"%{req.request}V %{req.url}V\" %{req.proto}V %>s %{resp.http.Content-Length}V %{resp.http.age}V \"%{resp.http.x-cache}V\" \"%{resp.http.x-cache-hits}V\" \"%{req.http.content-type}V\" \"%{req.http.accept-language}V\" \"%{cstr_escape(req.http.user-agent)}V\""
+    format_version = 2
+    gzip_level     = 9
+
+    period         = 60
+    response_condition = "5xx Error"
+
+    s3_access_key  = "${var.s3_logging_keys["access_key"]}"
+    s3_secret_key  = "${var.s3_logging_keys["secret_key"]}"
+    domain         = "s3-eu-west-1.amazonaws.com"
+    bucket_name    = "psf-fastly-logs-eu-west-1"
+    path           = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
+  }
+
   condition {
     name      = "Primary Failure (Mirror-able)"
     type      = "REQUEST"
     statement = "(!req.backend.healthy || req.restarts > 0) && (req.url ~ \"^/simple/\" || req.url ~ \"^/pypi/[^/]+(/[^/]+)?/json$\")"
     priority  = 1
+  }
+
+  condition {
+    name = "5xx Error"
+    type = "RESPONSE"
+    statement = "(resp.status >= 500 && resp.status < 600)"
   }
 }
 

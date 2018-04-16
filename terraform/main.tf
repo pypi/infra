@@ -80,6 +80,7 @@ module "file-hosting" {
   conveyor_address = "conveyor.cmh1.psfhosted.org"
   files_bucket     = "pypi-files"
   mirror           = "mirror.dub1.pypi.io"
+  s3_logging_keys = "${var.fastly_s3_logging}"
 
   linehaul = {
     address = "linehaul01.iad1.psf.io"
