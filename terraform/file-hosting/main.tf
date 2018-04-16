@@ -4,6 +4,7 @@ variable "conveyor_address" { type = "string" }
 variable "files_bucket" { type = "string" }
 variable "mirror" { type = "string" }
 variable "linehaul" { type = "map" }
+variable "s3_logging_keys" { type = "map" }
 
 variable "fastly_endpoints" { type = "map" }
 variable "domain_map" { type = "map" }
@@ -68,6 +69,12 @@ resource "fastly_service_v1" "files" {
     host   = "${var.files_bucket}.s3.amazonaws.com"
     method = "GET"
     path   = "/_health.txt"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
   }
 
   healthcheck {
@@ -76,6 +83,12 @@ resource "fastly_service_v1" "files" {
     host   = "${var.domain}"
     method = "GET"
     path   = "/last-modified"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
   }
 
 
@@ -103,6 +116,24 @@ resource "fastly_service_v1" "files" {
     response_condition = "Never"
   }
 
+  s3logging {
+    name           = "S3 Error Logs"
+
+    format         = "%h \"%{now}V\" %l \"%{req.request}V %{req.url}V\" %{req.proto}V %>s %{resp.http.Content-Length}V %{resp.http.age}V \"%{resp.http.x-cache}V\" \"%{resp.http.x-cache-hits}V\" \"%{req.http.content-type}V\" \"%{req.http.accept-language}V\" \"%{cstr_escape(req.http.user-agent)}V\""
+    format_version = 2
+    gzip_level     = 9
+
+    period         = 60
+    response_condition = "5xx Error"
+
+    s3_access_key  = "${var.s3_logging_keys["access_key"]}"
+    s3_secret_key  = "${var.s3_logging_keys["secret_key"]}"
+    domain         = "s3-eu-west-1.amazonaws.com"
+    bucket_name    = "psf-fastly-logs-eu-west-1"
+    path           = "/files-pythonhosted-org-errors/%Y/%m/%d/%H/%M/"
+  }
+
+
   condition {
     name      = "Package File"
     type      = "REQUEST"
@@ -115,6 +146,12 @@ resource "fastly_service_v1" "files" {
     type      = "REQUEST"
     statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
     priority  = 2
+  }
+
+  condition {
+    name = "5xx Error"
+    type = "RESPONSE"
+    statement = "(resp.status >= 500 && resp.status < 600)"
   }
 
   condition {
