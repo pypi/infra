@@ -1,6 +1,7 @@
 variable "tags" { type = "map" }
 variable "primary_domain" { type = "string" }
 variable "user_content_domain" { type = "string" }
+variable "google_verification" { type = "map" }
 
 
 resource "aws_route53_delegation_set" "ns" {}
@@ -10,6 +11,15 @@ resource "aws_route53_zone" "primary" {
   name              = "${var.primary_domain}"
   delegation_set_id = "${aws_route53_delegation_set.ns.id}"
   tags              = "${var.tags}"
+}
+
+
+resource "aws_route53_record" "google-verify" {
+  zone_id = "${aws_route53_zone.primary.zone_id}"
+  name    = "${var.primary_domain}"
+  type    = "TXT"
+  ttl     = 60
+  records = ["${var.google_verification["primary"]}"]
 }
 
 
