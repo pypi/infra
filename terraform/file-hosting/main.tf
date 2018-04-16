@@ -21,6 +21,8 @@ resource "fastly_service_v1" "files" {
     name = "${var.domain}"
   }
 
+  domain { name = "${var.files_bucket}.s3.amazonaws.com" }
+
   backend {
     name              = "Conveyor"
     shield            = "iad-va-us"
@@ -37,7 +39,7 @@ resource "fastly_service_v1" "files" {
     auto_loadbalance  = false
     shield            = "sea-wa-us"
 
-    request_condition = "Package File"
+    request_condition = "S3 Host"
     healthcheck       = "S3 Health"
 
     address           = "${var.files_bucket}.s3.amazonaws.com"
@@ -104,16 +106,16 @@ resource "fastly_service_v1" "files" {
   }
 
   condition {
-    name      = "Package File"
+    name      = "S3 Host"
     type      = "REQUEST"
-    statement = "req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
+    statement = "req.http.Host ~ \".s3.amazonaws.com$\""
     priority  = 1
   }
 
   condition {
     name      = "Primary Failure (Mirror-able)"
     type      = "REQUEST"
-    statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
+    statement = "(!req.backend.healthy || req.restarts > 0) && req.url.path ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
     priority  = 2
   }
 

@@ -47,14 +47,17 @@ sub vcl_recv {
     # Requests that are for an *actual* file get disaptched to Amazon S3 instead of
     # to our typical backends. We need to setup the request to correctly access
     # S3 and to authorize ourselves to S3.
-    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+    if (req.url.path ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
         # Setup our environment to better match what S3 expects/needs
         set req.http.Host = var.S3-Bucket-Name ".s3.amazonaws.com";
         set req.http.Date = now;
         set req.url = regsuball(req.url, "\+", urlencode("+"));
+    }
 
-        # Compute the Authorization header that S3 requires to be able to
-        # access the files stored there.
+
+    # Compute the Authorization header that S3 requires to be able to access the files
+    # stored there.
+    if (req.http.Host ~ ".s3.amazonaws.com$") {
         set req.http.Authorization = "AWS " var.AWS-Access-Key-ID ":" digest.hmac_sha1_base64(var.AWS-Secret-Access-Key, "GET" LF LF LF req.http.Date LF "/" var.S3-Bucket-Name req.url.path);
     }
 
