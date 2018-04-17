@@ -179,11 +179,13 @@ sub vcl_deliver {
 
     # Unset a few headers set by Amazon that we don't really have a need/desire
     # to send to clients.
-    unset resp.http.x-amz-replication-status;
-    unset resp.http.x-amz-meta-python-version;
-    unset resp.http.x-amz-meta-version;
-    unset resp.http.x-amz-meta-package-type;
-    unset resp.http.x-amz-meta-project;
+    if (!req.http.Fastly-FF) {
+        unset resp.http.x-amz-replication-status;
+        unset resp.http.x-amz-meta-python-version;
+        unset resp.http.x-amz-meta-version;
+        unset resp.http.x-amz-meta-package-type;
+        unset resp.http.x-amz-meta-project;
+    }
 
     return(deliver);
 }
