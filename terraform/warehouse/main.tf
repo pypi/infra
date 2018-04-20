@@ -45,6 +45,9 @@ resource "fastly_service_v1" "pypi" {
     use_ssl           = true
     ssl_cert_hostname = "${var.backend}"
     ssl_sni_hostname  = "${var.backend}"
+
+    connect_timeout   = 3000
+    error_threshold   = 5
   }
 
   backend {
@@ -60,6 +63,9 @@ resource "fastly_service_v1" "pypi" {
     use_ssl           = true
     ssl_cert_hostname = "${var.mirror}"
     ssl_sni_hostname  = "${var.mirror}"
+
+    connect_timeout   = 3000
+    error_threshold   = 5
   }
 
   healthcheck {
@@ -113,7 +119,7 @@ resource "fastly_service_v1" "pypi" {
   s3logging {
     name           = "S3 Error Logs"
 
-    format         = "%h \"%{now}V\" %l \"%{req.request}V %{req.url}V\" %{req.proto}V %>s %{resp.http.Content-Length}V %{resp.http.age}V \"%{resp.http.x-cache}V\" \"%{resp.http.x-cache-hits}V\" \"%{req.http.content-type}V\" \"%{req.http.accept-language}V\" \"%{cstr_escape(req.http.user-agent)}V\""
+    format         = "%h \"%{now}V\" %l \"%{req.request}V %{req.url}V\" %{req.proto}V %>s %{resp.http.Content-Length}V %{resp.http.age}V \"%{resp.http.x-cache}V\" \"%{resp.http.x-cache-hits}V\" \"%{req.http.content-type}V\" \"%{req.http.accept-language}V\" \"%{cstr_escape(req.http.user-agent)}V\" %D \"%{fastly_info.state}V\""
     format_version = 2
     gzip_level     = 9
 
