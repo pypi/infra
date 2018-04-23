@@ -32,8 +32,10 @@ resource "fastly_service_v1" "files" {
     ssl_cert_hostname = "${var.conveyor_address}"
     ssl_sni_hostname  = "${var.conveyor_address}"
 
-    connect_timeout   = 3000
-    error_threshold   = 5
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
   }
 
   backend {
@@ -50,8 +52,10 @@ resource "fastly_service_v1" "files" {
     ssl_cert_hostname = "${var.files_bucket}.s3.amazonaws.com"
     ssl_sni_hostname  = "${var.files_bucket}.s3.amazonaws.com"
 
-    connect_timeout   = 3000
-    error_threshold   = 5
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
   }
 
   backend {
