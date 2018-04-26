@@ -57,19 +57,19 @@ def token_revoke_self(vault_ca_file, vault_addr, token):
 
 
 def leases_lookup(vault_ca_file, vault_addr, token, lease_id):
-    response = requests.post(f'{vault_addr}/v1/sys/leases/lookup',
-                             headers={'X-Vault-Token': token},
-                             json={'lease_id': lease_id},
-                             verify=vault_ca_file)
+    response = requests.put(f'{vault_addr}/v1/sys/leases/lookup',
+                            headers={'X-Vault-Token': token},
+                            json={'lease_id': lease_id},
+                            verify=vault_ca_file)
     response.raise_for_status()
     return response
 
 
 def leases_renew(vault_ca_file, vault_addr, token, lease_id):
-    response = requests.post(f'{vault_addr}/v1/sys/leases/renew',
-                             headers={'X-Vault-Token': token},
-                             json={'lease_id': lease_id},
-                             verify=vault_ca_file)
+    response = requests.put(f'{vault_addr}/v1/sys/leases/renew',
+                            headers={'X-Vault-Token': token},
+                            json={'lease_id': lease_id},
+                            verify=vault_ca_file)
     response.raise_for_status()
     return response
 
