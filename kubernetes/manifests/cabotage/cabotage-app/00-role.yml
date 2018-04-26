@@ -4,10 +4,43 @@ metadata:
   namespace: cabotage-app
   name: cabotage-deployments
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - get
-  - list
+  - verbs:
+      - get
+      - list
+      - create
+      - patch
+    apiGroups:
+      - ''
+    resources:
+      - serviceaccounts
+      - namespaces
+      - secrets
+  - verbs:
+      - get
+      - list
+      - create
+      - patch
+    apiGroups:
+      - apps
+    resources:
+      - deployments
+      - deployments/scale
+  - verbs:
+      - get
+      - list
+      - create
+      - patch
+      - delete
+    apiGroups:
+      - batch
+    resources:
+      - jobs
+      - jobs/status
+  - verbs:
+      - get
+      - list
+    apiGroups:
+      - ''
+    resources:
+      - pods
+      - pods/log
