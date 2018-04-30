@@ -55,22 +55,6 @@ sub vcl_recv {
     # thing, reducing cache misses due to ordering differences.
     set req.url = boltsort.sort(req.url);
 
-    # We have a number of items that we'll pass back to the origin.
-    # Set a header to tell the backend if we're using https or http.
-    if (req.http.Fastly-SSL) {
-        set req.http.Warehouse-Proto = "https";
-    } else {
-        set req.http.Warehouse-Proto = "http";
-    }
-    # Pass the client IP address back to the backend.
-    if (req.http.Fastly-Client-IP) {
-        set req.http.Warehouse-IP = req.http.Fastly-Client-IP;
-    }
-    # Pass the real host value back to the backend.
-    if (req.http.Host) {
-        set req.http.Warehouse-Host = req.http.host;
-    }
-
 
 #FASTLY recv
 
@@ -112,16 +96,50 @@ sub vcl_recv {
         }
     }
 
-    # Redirect pypi.io, www.pypi.io, and warehouse.python.org to pypi.org, this
-    # is purposely done *after* the HTTPS checks.
-    if (std.tolower(req.http.host) ~ "^(www.pypi.org|(www.)?pypi.io|warehouse.python.org)$") {
-        set req.http.Location = "https://pypi.org" req.url;
-        error 750 "Redirect to Primary Domain";
+    # We need to redirect all of the existing domain names to the new domain name,
+    # this includes the temporary domain names that Warehouse had, as well as the
+    # existing legacy domain name. This is purposely being done *after* the HTTPS
+    # checks so that we can force clients to utilize HTTPS.
+    if (std.tolower(req.http.host) ~ "^(www.pypi.org|(www.)?pypi.io|warehouse.python.org|pypi.python.org)$") {
+        # For HTTP GET/HEAD requests, we'll simply issue a 301 redirect, because that
+        # has the widest support and is a permanent redirect. However, it has the
+        # disadvantage of changing a POST to a GET, so for POST, etc we will attempt
+        # to use a 308 redirect, which will keep the method. The 308 redirect is newer
+        # and older may tools may not support them, so we may need to revist this.
+        if (req.request == "GET" || req.request == "HEAD") {
+            # Handle our GET/HEAD requests with a 301 redirect.
+            set req.http.Location = "https://pypi.org" req.url;
+            error 750 "Redirect to Primary Domain";
+        } else if (req.request == "POST" &&
+                   std.tolower(req.http.host) == "pypi.python.org" &&
+                   (req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+                   req.http.Content-Type ~ "text/xml") {
+            # The one exception to this, is XML-RPC requests to pypi.python.org, which
+            # we want to silently rewrite to continue to function as if it was hitting
+            # the new Warehouse endpoints. All we really need to do here is to fix
+            # the Host header, and everything else will just continue to work.
+            set req.http.Host = "pypi.org";
+        } else {
+            # Finally, handle our other methods with a 308 redirect.
+            set req.http.Location = "https://pypi.org" req.url;
+            error 751 "Redirect to Primary Domain";
+        }
     }
-    # Redirect warehouse-staging.python.org to test.pypi.io.
-    if (std.tolower(req.http.host) ~ "^(test.pypi.io|warehouse-staging.python.org)$") {
-        set req.http.Location = "https://test.pypi.org" req.url;
-        error 750 "Redirect to Primary Domain";
+
+    # We have a number of items that we'll pass back to the origin.
+    # Set a header to tell the backend if we're using https or http.
+    if (req.http.Fastly-SSL) {
+        set req.http.Warehouse-Proto = "https";
+    } else {
+        set req.http.Warehouse-Proto = "http";
+    }
+    # Pass the client IP address back to the backend.
+    if (req.http.Fastly-Client-IP) {
+        set req.http.Warehouse-IP = req.http.Fastly-Client-IP;
+    }
+    # Pass the real host value back to the backend.
+    if (req.http.Host) {
+        set req.http.Warehouse-Host = req.http.host;
     }
 
     # On a POST, we want to skip the shielding and hit backends directly.
@@ -307,6 +325,12 @@ sub vcl_error {
         set obj.http.Location = req.http.Location;
         set obj.http.Content-Type = "text/html; charset=UTF-8";
         synthetic {"<html><head><title>301 Moved Permanently</title></head><body><center><h1>301 Moved Permanently</h1></center></body></html>"};
+        return(deliver);
+    } else if (obj.status == 751) {
+        set obj.status = 308;
+        set obj.http.Location = req.http.Location;
+        set obj.http.Content-Type = "text/html; charset=UTF-8";
+        synthetic {"<html><head><title>308 Permanent Redirect</title></head><body><center><h1>308 Permanent Redirect</h1></center></body></html>"};
         return(deliver);
     }
 

@@ -33,6 +33,7 @@ resource "fastly_service_v1" "pypi" {
   domain { name = "${var.extra_domains[1]}" }
   domain { name = "${var.extra_domains[2]}" }
   domain { name = "${var.extra_domains[3]}" }
+  domain { name = "${var.extra_domains[4]}" }
 
   backend {
     name             = "Application"
