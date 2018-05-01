@@ -62,7 +62,7 @@ module "pypi" {
   # number of entries in any extra_domains across instances of this module, and
   # changing the number of elements in the list requires modifying the module to
   # handle the new number of elements.
-  extra_domains   = ["www.pypi.org", "pypi.io", "www.pypi.io", "warehouse.python.org"]
+  extra_domains   = ["www.pypi.org", "pypi.python.org", "pypi.io", "www.pypi.io", "warehouse.python.org"]
   backend         = "warehouse.cmh1.psfhosted.org"
   mirror          = "mirror.dub1.pypi.io"
   s3_logging_keys = "${var.fastly_s3_logging}"
