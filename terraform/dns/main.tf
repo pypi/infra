@@ -1,7 +1,7 @@
 variable "tags" { type = "map" }
 variable "primary_domain" { type = "string" }
 variable "user_content_domain" { type = "string" }
-variable "google_verification" { type = "list" }
+variable "apex_txt" { type = "list" }
 
 
 resource "aws_route53_delegation_set" "ns" {}
@@ -14,12 +14,12 @@ resource "aws_route53_zone" "primary" {
 }
 
 
-resource "aws_route53_record" "google-verify" {
+resource "aws_route53_record" "apex_txt" {
   zone_id = "${aws_route53_zone.primary.zone_id}"
   name    = "${var.primary_domain}"
   type    = "TXT"
   ttl     = 60
-  records = "${var.google_verification}"
+  records = "${var.apex_txt}"
 }
 
 
