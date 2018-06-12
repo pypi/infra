@@ -34,9 +34,10 @@ module "dns" {
   primary_domain = "pypi.org"
   user_content_domain = "pythonhosted.org"
 
-  google_verification = {
-    primary = "google-site-verification=YdrllWIiutXFzqhEamHP4HgCoh88dTFzb2A6QFljooc"
-  }
+  google_verification = [
+    "google-site-verification=YdrllWIiutXFzqhEamHP4HgCoh88dTFzb2A6QFljooc",
+    "google-site-verification=ZI8zeHE6SWuJljW3f4csGetjOWo4krvjf13tdORsH4Y"
+  ]
 }
 
 
