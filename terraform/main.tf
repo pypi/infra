@@ -34,10 +34,22 @@ module "dns" {
   primary_domain = "pypi.org"
   user_content_domain = "pythonhosted.org"
 
-  google_verification = [
+  apex_txt = [
     "google-site-verification=YdrllWIiutXFzqhEamHP4HgCoh88dTFzb2A6QFljooc",
-    "google-site-verification=ZI8zeHE6SWuJljW3f4csGetjOWo4krvjf13tdORsH4Y"
+    "google-site-verification=ZI8zeHE6SWuJljW3f4csGetjOWo4krvjf13tdORsH4Y",
+    "v=spf1 include:_spf.google.com include:amazonses.com -all"
   ]
+}
+
+
+module "gmail" {
+  source = "./gmail"
+
+  zone_id  = "${module.dns.primary_zone_id}"
+  domain = "pypi.org"
+
+  dkim_host_name = "google._domainkey"
+  dkim_txt_record = "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCS6JrwMkzjpDb1I6QbSxhiVeU9Fl2G1RJYtBR58Ult1+6pezNY9krZ8waNWcymaH8rvqlbKicPuwmzDSamC6lZhQZc05w5moDIF5lmu+Ji9jcQF679K1DP1nwy6B3ro4//62P0/88aFRRK+k+cth3ZQsSqNnxf9uQYykt75O7p/QIDAQAB"
 }
 
 
