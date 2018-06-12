@@ -1,7 +1,7 @@
 variable "tags" { type = "map" }
 variable "primary_domain" { type = "string" }
 variable "user_content_domain" { type = "string" }
-variable "google_verification" { type = "map" }
+variable "google_verification" { type = "list" }
 
 
 resource "aws_route53_delegation_set" "ns" {}
@@ -19,7 +19,7 @@ resource "aws_route53_record" "google-verify" {
   name    = "${var.primary_domain}"
   type    = "TXT"
   ttl     = 60
-  records = ["${var.google_verification["primary"]}"]
+  records = "${var.google_verification}"
 }
 
 
