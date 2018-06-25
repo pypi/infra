@@ -110,7 +110,8 @@ sub vcl_fetch {
     # When we're fetching our files, we want to give them a super long Cache-Control
     # header. We can't add these by default in S3, but we can add them here.
     if (beresp.status == 200 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
-        set beresp.http.Cache-Control = "max-age=365000000, immutable";
+        set beresp.http.Cache-Control = "max-age=365000000, immutable, public";
+        set beresp.ttl = 365000000s;
     }
 
     # If there is a Set-Cookie header, we'll ensure that we do not cache the
