@@ -60,9 +60,26 @@ module "email" {
     "aws.email" = "aws.us-west-2"
   }
 
-  zone_id  = "${module.dns.primary_zone_id}"
-  domain   = "pypi.org"
-  hook_url = "https://pypi.org/_/ses-hook/"
+  name         = "pypi"
+  display_name = "PyPI"
+  zone_id      = "${module.dns.primary_zone_id}"
+  domain       = "pypi.org"
+  hook_url     = "https://pypi.org/_/ses-hook/"
+}
+
+
+module "testpypi-email" {
+  source = "./email"
+  providers = {
+    "aws" = "aws"
+    "aws.email" = "aws.us-west-2"
+  }
+
+  name         = "testpypi"
+  display_name = "TestPyPI"
+  zone_id      = "${module.dns.primary_zone_id}"
+  domain       = "test.pypi.org"
+  hook_url     = "https://test.pypi.org/_/ses-hook/"
 }
 
 
@@ -119,4 +136,5 @@ module "docs-hosting" {
 
 
 output "nameservers" { value = ["${module.dns.nameservers}"] }
-output "ses_delivery_topic" { value = "${module.email.delivery_topic}" }
+output "pypi-ses_delivery_topic" { value = "${module.email.delivery_topic}" }
+output "testpypi-ses_delivery_topic" { value = "${module.testpypi-email.delivery_topic}" }
