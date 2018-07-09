@@ -5,6 +5,8 @@ provider "aws" {
 }
 
 
+variable "name" { type = "string" }
+variable "display_name" { type = "string" }
 variable "domain" { type = "string" }
 variable "zone_id" { type = "string" }
 variable "hook_url" { type = "string" }
@@ -43,8 +45,8 @@ resource "aws_route53_record" "primary_amazonses_dkim_record" {
 
 resource "aws_sns_topic" "delivery-events" {
   provider = "aws.email"
-  name = "pypi-ses-delivery-events-topic"
-  display_name = "PyPI SES Delivery Events"
+  name = "${var.name}-ses-delivery-events-topic"
+  display_name = "${var.display_name} SES Delivery Events"
 
   delivery_policy = <<EOF
 {
