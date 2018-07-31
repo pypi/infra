@@ -86,6 +86,7 @@ module "testpypi-email" {
 module "pypi" {
   source = "./warehouse"
 
+  name            = "PyPI"
   zone_id         = "${module.dns.primary_zone_id}"
   domain          = "pypi.org"
   # Because of limitations of the Terraform fastly provider, there must be the same
