@@ -139,6 +139,14 @@ resource "fastly_service_v1" "pypi" {
     path           = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
   }
 
+  response_object {
+    name = "Bandersnatch User-Agent prohibited"
+    status = 403
+    content = "Bandersnatch version no longer supported, upgrade to 1.4+"
+    content_type = "text/plain"
+    request_condition = "Bandersnatch User-Agent prohibited"
+  }
+
   condition {
     name      = "Primary Failure (Mirror-able)"
     type      = "REQUEST"
@@ -150,6 +158,12 @@ resource "fastly_service_v1" "pypi" {
     name = "5xx Error"
     type = "RESPONSE"
     statement = "(resp.status >= 500 && resp.status < 600)"
+  }
+
+  condition {
+    name = "Bandersnatch User-Agent prohibited"
+    type = "REQUEST"
+    statement = "req.http.user-agent ~ \"bandersnatch/1\\.(0|2|3)\""
   }
 }
 
