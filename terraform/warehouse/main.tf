@@ -1,3 +1,4 @@
+variable "name" { type = "string" }
 variable "zone_id" { type = "string" }
 variable "domain" { type = "string" }
 variable "extra_domains" { type = "list" }
