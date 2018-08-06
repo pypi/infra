@@ -10,6 +10,7 @@ variable "display_name" { type = "string" }
 variable "domain" { type = "string" }
 variable "zone_id" { type = "string" }
 variable "hook_url" { type = "string" }
+variable "dmarc" { type = "string", default = "" }
 
 
 resource "aws_ses_domain_identity" "primary" {
@@ -40,6 +41,15 @@ resource "aws_route53_record" "primary_amazonses_dkim_record" {
   type    = "CNAME"
   ttl     = "1800"
   records = ["${element(aws_ses_domain_dkim.primary.dkim_tokens, count.index)}.dkim.amazonses.com"]
+}
+
+resource "aws_route53_record" "primary_amazonses_dmarc_record" {
+  count = "${length(var.dmarc) >= 1 ? 1 : 0}"
+  zone_id = "${var.zone_id}"
+  name    = "_dmarc.${var.domain}"
+  type    = "TXT"
+  ttl     = "60"
+  records = ["v=DMARC1; p=none; rua=${var.dmarc}; fo=1; adkim=s; aspf=s"]
 }
 
 
