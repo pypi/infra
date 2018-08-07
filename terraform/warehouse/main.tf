@@ -163,7 +163,7 @@ resource "fastly_service_v1" "pypi" {
   condition {
     name = "Bandersnatch User-Agent prohibited"
     type = "REQUEST"
-    statement = "req.http.user-agent ~ \"bandersnatch/1\\.(0|2|3)\""
+    statement = "req.http.user-agent ~ \"bandersnatch/1\\.(0|1|2|3)\\ \""
   }
 }
 
