@@ -34,6 +34,13 @@ module "dns" {
   primary_domain = "pypi.org"
   user_content_domain = "pythonhosted.org"
 
+  caa_report_uri = "mailto:infrastructure-staff@python.org"
+  caa_issuers = [
+    "amazon.com",
+    "globalsign.com",
+    "Digicert.com",
+  ]
+
   apex_txt = [
     "google-site-verification=YdrllWIiutXFzqhEamHP4HgCoh88dTFzb2A6QFljooc",
     "google-site-verification=ZI8zeHE6SWuJljW3f4csGetjOWo4krvjf13tdORsH4Y",
