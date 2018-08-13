@@ -12,6 +12,10 @@ variable "zone_id" { type = "string" }
 variable "hook_url" { type = "string" }
 variable "dmarc" { type = "string", default = "" }
 
+data "aws_region" "mail_region" {
+  provider = "aws.email"
+}
+
 
 resource "aws_ses_domain_identity" "primary" {
   provider = "aws.email"
@@ -22,6 +26,12 @@ resource "aws_ses_domain_identity" "primary" {
 resource "aws_ses_domain_dkim" "primary" {
   provider = "aws.email"
   domain = "${aws_ses_domain_identity.primary.domain}"
+}
+
+resource "aws_ses_domain_mail_from" "primary" {
+  provider = "aws.email"
+  domain = "${aws_ses_domain_identity.primary.domain}"
+  mail_from_domain = "ses.${aws_ses_domain_identity.primary.domain}"
 }
 
 
@@ -49,7 +59,16 @@ resource "aws_route53_record" "primary_amazonses_dmarc_record" {
   name    = "_dmarc.${var.domain}"
   type    = "TXT"
   ttl     = "60"
-  records = ["v=DMARC1; p=none; rua=${var.dmarc}; fo=1; adkim=s; aspf=s"]
+  records = ["v=DMARC1; p=none; rua=${var.dmarc}; fo=1; adkim=r; aspf=r"]
+}
+
+resource "aws_route53_record" "primary_amazonses_mx_record" {
+  provider = "aws.email"
+  zone_id = "${var.zone_id}"
+  name    = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
+  type    = "MX"
+  ttl     = "600"
+  records = ["10 feedback-smtp.${data.aws_region.mail_region.name}.amazonses.com"]
 }
 
 
