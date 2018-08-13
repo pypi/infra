@@ -71,7 +71,7 @@ module "email" {
   display_name = "PyPI"
   zone_id      = "${module.dns.primary_zone_id}"
   domain       = "pypi.org"
-  dmarc        = "mailto:re+n9yxu3gf4ub@dmarc.postmarkapp.com"
+  dmarc        = "mailto:re+ahhqsxbwmkl@dmarc.postmarkapp.com"
   hook_url     = "https://pypi.org/_/ses-hook/"
 }
 
