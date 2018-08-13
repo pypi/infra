@@ -63,7 +63,6 @@ resource "aws_route53_record" "primary_amazonses_dmarc_record" {
 }
 
 resource "aws_route53_record" "primary_amazonses_mx_record" {
-  provider = "aws.email"
   zone_id = "${var.zone_id}"
   name    = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
   type    = "MX"
