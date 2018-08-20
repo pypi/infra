@@ -70,6 +70,14 @@ resource "aws_route53_record" "primary_amazonses_mx_record" {
   records = ["10 feedback-smtp.${data.aws_region.mail_region.name}.amazonses.com"]
 }
 
+resource "aws_route53_record" "primary_amazonses_spf_record" {
+  zone_id = "${var.zone_id}"
+  name = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
+  type = "TXT"
+  ttl = "600"
+  records = ["v=spf1 include:amazonses.com -all"]
+}
+
 
 resource "aws_sns_topic" "delivery-events" {
   provider = "aws.email"
