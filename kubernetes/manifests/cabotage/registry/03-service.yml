@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: cabotage
+  name: registry
+  labels:
+    app: registry
+spec:
+  clusterIP: None
+  ports:
+    - port: 5000
+      name: registry
+  selector:
+    app: registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: cabotage
+  name: registry-kubelet
+  labels:
+    app: registry-kubelet
+spec:
+  type: NodePort
+  ports:
+    - nodePort: 30000
+      port: 5000
+      name: registry-kubelet
+  selector:
+    app: registry-kubelet

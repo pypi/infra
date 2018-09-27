@@ -1,0 +1,99 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  namespace: cabotage
+  name: goldfish
+  labels:
+    app: goldfish
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: goldfish
+    spec:
+      serviceAccountName: goldfish
+      initContainers:
+        - name: cabotage-enroller
+          image: cabotage/sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          args:
+            - "kube_login"
+            - "--namespace=$(NAMESPACE)"
+            - "--vault-auth-kubernetes-role=cabotage-goldfish"
+            - "--pod-name=$(POD_NAME)"
+            - "--pod-ip=$(POD_IP)"
+            - "--service-names=goldfish"
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /var/run/secrets/vault
+      containers:
+        - name: cabotage-sidecar
+          image: cabotage/sidecar:v1.0.0a1
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          args:
+            - "maintain"
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /var/run/secrets/vault
+        - name: goldfish
+          image: cabotage/goldfish:v1.0.0a1
+          command: ['goldfish']
+          args:
+            - "-config=/etc/goldfish/config.hcl"
+            - "-nomad-token-file=/var/run/secrets/vault/vault-token"
+          ports:
+            - containerPort: 8000
+              name: http
+          volumeMounts:
+            - name: goldfish-config
+              mountPath: /etc/goldfish
+            - name: vault-secrets
+              mountPath: /var/run/secrets/vault
+          resources:
+            limits:
+              memory: "50Mi"
+              cpu: "100m"
+          securityContext:
+            readOnlyRootFilesystem: true
+            capabilities:
+              add:
+              - IPC_LOCK
+          readinessProbe:
+            httpGet:
+              port: 8000
+              path: /#/
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              port: 8000
+              path: /#/
+              scheme: HTTPS
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: vault-secrets
+          emptyDir:
+            medium: "Memory"
+            sizeLimit: "1M"
+        - name: goldfish-config
+          configMap:
+            name: goldfish

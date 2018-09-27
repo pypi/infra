@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cabotage-config
+  namespace: cabotage
+data:
+  C_FORCE_ROOT: "1"
+  CABOTAGE_VAULT_DB_CREDS_PATH: cabotage-postgresql/creds/cabotage-app
+  CABOTAGE_VAULT_DB_DATABASE_URI: postgresql://postgres/cabotage
+  CABOTAGE_SECRET_KEY: v3rys3cr3t
+  CABOTAGE_SECURITY_PASSWORD_SALT: v3rys3cr3t
+  CABOTAGE_CONSUL_TOKEN_FILE: /var/run/secrets/vault/consul-token
+  CABOTAGE_CONSUL_HOST: consul.cabotage.svc.cluster.local
+  CABOTAGE_CONSUL_PORT: "8443"
+  CABOTAGE_CONSUL_SCHEME: https
+  CABOTAGE_CONSUL_VERIFY: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  CABOTAGE_CONSUL_PREFIX: cabotage
+  CABOTAGE_VAULT_TOKEN_FILE: /var/run/secrets/vault/vault-token
+  CABOTAGE_VAULT_URL: https://vault.cabotage.svc.cluster.local
+  CABOTAGE_VAULT_VERIFY: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  CABOTAGE_VAULT_PREFIX: cabotage-secrets/automation
+  CABOTAGE_VAULT_SIGNING_MOUNT: cabotage-app-transit
+  CABOTAGE_VAULT_SIGNING_KEY: registry
+  CABOTAGE_VAULT_LEASE_PATH: /var/run/secrets/vault
+  CABOTAGE_REGISTRY: registry.cabotage.svc.cluster.local:5000
+  CABOTAGE_REGISTRY_SECURE: "True"
+  CABOTAGE_REGISTRY_AUTH_SECRET: v3rys3cr3t
+  CABOTAGE_DOCKER_URL: tcp://builder.cabotage.svc.cluster.local:2375
+  CABOTAGE_DOCKER_SECURE: "True"
+  CABOTAGE_DOCKER_VERIFY: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  CABOTAGE_MINIO_ENDPOINT: minio.cabotage.svc.cluster.local:9000
+  CABOTAGE_MINIO_BUCKET: cabotage-registry
+  CABOTAGE_MINIO_ACCESS_KEY: "MINIOACCESSKEY"
+  CABOTAGE_MINIO_SECRET_KEY: "MINIOSECRETKEY"
+  CABOTAGE_MINIO_SECURE: "True"
+  CABOTAGE_MINIO_CA_CERT: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  CABOTAGE_MINIO_PREFIX: cabotage-builds
+  CABOTAGE_CELERY_BROKER_URL: redis://localhost:6379
+  CABOTAGE_CELERY_RESULT_BACKEND: redis://localhost:6379
+  CABOTAGE_KUBERNETES_ENABLED: "True"

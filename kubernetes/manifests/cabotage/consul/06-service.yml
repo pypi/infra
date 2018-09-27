@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  labels:
+    app: consul
+  namespace: cabotage
+  name: consul
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8500
+    protocol: TCP
+    targetPort: 8500
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  - name: rpc
+    port: 8400
+    protocol: TCP
+    targetPort: 8400
+  - name: serflan-tcp
+    port: 8301
+    protocol: TCP
+    targetPort: 8301
+  - name: serflan-udp
+    port: 8301
+    protocol: UDP
+    targetPort: 8301
+  - name: serfwan-tcp
+    port: 8302
+    protocol: TCP
+    targetPort: 8302
+  - name: serfwan-udp
+    port: 8302
+    protocol: UDP
+    targetPort: 8302
+  - name: server
+    port: 8300
+    protocol: TCP
+    targetPort: 8300
+  - name: consuldns
+    port: 8600
+    protocol: TCP
+    targetPort: 8600
+  selector:
+    app: consul
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

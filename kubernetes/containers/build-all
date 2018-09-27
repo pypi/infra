@@ -1,0 +1,14 @@
+#!/bin/bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR
+
+for container_dir in $(find . -type d); do
+  pushd $container_dir
+  if [[ $* == *--push* ]]; then
+    ../../scripts/build-container-push
+  else
+    ../../scripts/build-container
+  fi
+  popd
+done

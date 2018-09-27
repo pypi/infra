@@ -1,0 +1,282 @@
+#!/bin/bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR
+
+NAMESPACE=cabotage
+
+command -v jq > /dev/null 2>&1 || (echo "you must have 'jq' installed" && exit 1)
+
+FIRST_POD=($(kubectl get pod -n $NAMESPACE -l 'app=vault' -o json | jq -r '.items[0] | "\(.metadata.name) \(.status.podIP)"'))
+CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+
+POD_NAME=${FIRST_POD[0]}
+POD_IP=${FIRST_POD[1]}
+
+if [ -z $VAULT_TOKEN ]; then
+  echo "You must supply VAULT_TOKEN env var with vault root privileges"
+fi
+if [ -z $CONSUL_MANAGEMENT_TOKEN ]; then
+  echo "You must supply CONSUL_MANAGEMENT_TOKEN env var with consul management privileges"
+fi
+if [ -z $VAULT_TOKEN ] || [ -z $CONSUL_MANAGEMENT_TOKEN ] ;then
+  exit 1
+fi
+
+lookup_self_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/auth/token/lookup-self
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to get https://$POD_IP:8200/v1/auth/token/lookup-self... check service status and networking?"
+  echo $lookup_self_response
+  exit 1
+fi
+
+groups=($(echo "$lookup_self_response" | jq -r '.data.policies[]'))
+if ! [[ " ${groups[@]} " =~ " root " ]]; then
+  echo "You must supply VAULT_TOKEN env var with root privileges"
+  echo "Supplied VAULT_TOKEN does not have root policy" 
+  exit 1
+fi
+
+auth_backends_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/sys/auth
+)
+
+backends=($(echo "$auth_backends_response" | jq -r '.data | values[].type'))
+if [[ " ${backends[@]} " =~ " kubernetes " ]]; then
+  echo "Kubernetes auth backend already mounted!"
+else
+  echo "Enabling Kubernetes auth backend"
+  auth_enable_response=$(
+    kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      https://$POD_IP:8200/v1/sys/auth/kubernetes \
+      --data '
+      {
+        "type": "kubernetes",
+        "description": "login for kubernetes pods via ServiceAccount JWT"
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to enable Kubernetes auth backend"
+    echo $auth_enable_response
+    exit 1
+  fi
+fi
+
+echo "Configuring Kubernetes auth backend"
+kubectl exec -it -n $NAMESPACE $POD_NAME -c vault -- \
+  sh -c "VAULT_TOKEN="$VAULT_TOKEN" vault write auth/kubernetes/config \
+    token_reviewer_jwt=@/var/run/secrets/kubernetes.io/serviceaccount/token \
+    kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+    kubernetes_host=https://kubernetes.default.svc.cluster.local"
+
+echo "Creating binding for default/default ServiceAccount"
+create_role_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    https://$POD_IP:8200/v1/auth/kubernetes/role/default-default \
+    --data '
+    {
+      "bound_service_account_names": ["default"],
+      "bound_service_account_namespaces": ["default"],
+      "policies": ["default"],
+      "ttl": "21600",
+      "max_ttl": "21600",
+      "period": "21600"
+    }
+    '
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to create binding for default/default ServiceAccount"
+  echo $create_role_response
+  exit 1
+fi
+echo "Successfully created binding for default/default ServiceAccount"
+
+echo "Creating Vault Policy for cabotage-enrollment-controller"
+POLICY=$(python3 -c "import json; policy_doc = open('vault-policies/controller.hcl', 'rU').read().rstrip(); print(json.dumps(policy_doc))")
+create_policy_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    https://$POD_IP:8200/v1/sys/policy/cabotage-enrollment-controller \
+    --data '{"rules": '"$POLICY"'}'
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to cabotage-enrollment-controller Vault Policy"
+  echo $create_policy_response
+  exit 1
+fi
+echo "Successfully created vault policy for cabotage-enrollment-controller"
+
+echo "Creating binding for cabotage-enrollment-controller"
+create_role_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    --request POST \
+    https://$POD_IP:8200/v1/auth/kubernetes/role/cabotage-enrollment-controller \
+    --data '
+    {
+      "bound_service_account_names": ["enrollment-controller"],
+      "bound_service_account_namespaces": ["cabotage"],
+      "policies": ["cabotage-enrollment-controller"],
+      "ttl": "21600",
+      "max_ttl": "21600",
+      "period": "21600"
+    }
+    '
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to create binding for $NAMESPACE/enrollment-controller ServiceAccount"
+  echo $create_role_response
+  exit 1
+fi
+echo "Successfully created binding for $NAMESPACE/enrollment-controller ServiceAccount"
+
+mounts_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/sys/mounts
+)
+
+mounts=($(echo "$mounts_response" | jq -r '.data | keys'))
+
+if [[ " ${mounts[@]} " =~ ' "cabotage-secrets/", ' ]]; then
+  echo "Vault Secrets mount already mounted!"
+else
+  echo "Mounting Vault Secrets mount"
+  mount_response=$(
+    kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      https://$POD_IP:8200/v1/sys/mounts/cabotage-secrets \
+      --data '
+      {
+        "type": "kv",
+        "description": "secret storage for cabotage",
+        "config": {}
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to enable Consul Secrets mount"
+    echo $mount_response
+    exit 1
+  fi
+fi
+
+if [[ " ${mounts[@]} " =~ ' "cabotage-consul/", ' ]]; then
+  echo "Consul Secrets mount already mounted!"
+else
+  echo "Enabling Consul Secrets mount"
+  mount_response=$(
+    kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      https://$POD_IP:8200/v1/sys/mounts/cabotage-consul \
+      --data '
+      {
+        "type": "consul",
+        "description": "automate consul tokens for kubernetes pods via ServiceAccount JWT",
+        "config": {}
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to enable Consul Secrets mount"
+    echo $mount_response
+    exit 1
+  fi
+  echo "Generating Consul Management Token for Vault"
+  token_response=$(
+    kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --header "X-Consul-Token: $CONSUL_MANAGEMENT_TOKEN" \
+      --request PUT \
+      http://127.0.0.1:8500/v1/acl/create \
+      --data '
+      {
+        "Name": "Vault Consul Backend Management Token",
+        "Type": "management"
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to generate Consul Management Token for Vault"
+    echo $token_response
+    exit 1
+  fi
+  VAULT_CONSUL_MANAGEMENT_TOKEN=$(echo $token_response | jq -r '.ID')
+  echo "Configuring Consul Secret Backend for Vault"
+  configure_response=$(
+    kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+      curl --silent --show-error --fail \
+      --cacert $CA_CERT \
+      --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      https://$POD_IP:8200/v1/cabotage-consul/config/access \
+      --data '
+      {
+        "address": "127.0.0.1:8500",
+        "scheme": "http",
+        "token": "'"$VAULT_CONSUL_MANAGEMENT_TOKEN"'"
+      }
+      '
+  )
+  if [ $? -ne 0 ]; then
+    echo "Failed to configure Consul Secret Backend for Vault"
+    echo $configure_response
+    exit 1
+  fi
+fi
+
+echo "Configuring readonly role for Consul Secret Backend"
+READ_ONLY_POLICY=$(cat consul-policies/readonly.hcl | base64)
+role_create_response=$(
+  kubectl exec -n $NAMESPACE $POD_NAME -c consul -- \
+    curl --silent --show-error --fail \
+    --cacert $CA_CERT \
+    --header "X-Vault-Token: $VAULT_TOKEN" \
+    https://$POD_IP:8200/v1/cabotage-consul/roles/readonly \
+    --data '
+    {
+      "token_type": "client",
+      "lease": "1h",
+      "policy": "'"$READ_ONLY_POLICY"'"
+    }
+    '
+)
+if [ $? -ne 0 ]; then
+  echo "Failed to configure readonly role for Consul Secret Backend"
+  echo $role_create_response
+  exit 1
+fi
+
+exit 0
