@@ -44,7 +44,7 @@ module "dns" {
   apex_txt = [
     "google-site-verification=YdrllWIiutXFzqhEamHP4HgCoh88dTFzb2A6QFljooc",
     "google-site-verification=ZI8zeHE6SWuJljW3f4csGetjOWo4krvjf13tdORsH4Y",
-    "v=spf1 include:_spf.google.com -all"
+    "v=spf1 include:_spf.google.com include:amazonses.com -all"
   ]
 }
 
