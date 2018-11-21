@@ -286,6 +286,13 @@ sub vcl_deliver {
     # they are not generally useful.
     unset resp.http.Via;
 
+    # The Age header will reflect how long an item has been in the Varnish cache.
+    # If present, clients will calculate `cache duration = max-age - Age` to see
+    # how long they should cache for. We drop the header so clients will use max-age.
+    # See http://book.varnish-software.com/4.0/chapters/HTTP.html#age and
+    # https://tools.ietf.org/html/rfc7234#section-4.2.3
+    unset resp.http.Age;
+
     # Set our standard security headers, we do this in VCL rather than in
     # Warehouse itself so that we always get these headers, regardless of the
     # origin server being used.
