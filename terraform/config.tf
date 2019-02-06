@@ -2,12 +2,14 @@ variable "credentials" { type = "map" }
 
 
 provider "aws" {
+  version = "~> 1.51"
   region  = "us-east-2"
   profile = "psf-prod"
 }
 
 
 provider "aws" {
+  version = "~> 1.51"
   alias   = "us-west-2"
   region  = "us-west-2"
   profile = "psf-prod"

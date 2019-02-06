@@ -5,6 +5,7 @@ variable "extra_domains" { type = "list" }
 variable "backend" { type = "string" }
 variable "mirror" { type = "string" }
 variable "s3_logging_keys" { type = "map" }
+variable "linehaul_bucket" { type = "string" }
 
 variable "fastly_endpoints" { type = "map" }
 variable "domain_map" { type = "map" }
@@ -139,6 +140,25 @@ resource "fastly_service_v1" "pypi" {
     path           = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
   }
 
+  s3logging {
+    name           = "linehaul"
+
+    format_version = 2
+    period         = 300
+    gzip_level     = 9
+
+    # We actually never want this to log by default, we'll manually log to it in
+    # our VCL, but we need to set it here so that the system is configured to
+    # have it as a logger.
+    response_condition = "Never"
+
+    s3_access_key  = "${var.s3_logging_keys["access_key"]}"
+    s3_secret_key  = "${var.s3_logging_keys["secret_key"]}"
+    domain         = "s3-us-east-2.amazonaws.com"
+    bucket_name    = "${var.linehaul_bucket}"
+    path           = "/%Y/%m/%d/%H/%M/"
+  }
+
   response_object {
     name = "Bandersnatch User-Agent prohibited"
     status = 403
@@ -164,6 +184,12 @@ resource "fastly_service_v1" "pypi" {
     name = "Bandersnatch User-Agent prohibited"
     type = "REQUEST"
     statement = "req.http.user-agent ~ \"bandersnatch/1\\.(0|1|2|3)\\ \""
+  }
+
+  condition {
+    name      = "Never"
+    type      = "RESPONSE"
+    statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
 }
 
