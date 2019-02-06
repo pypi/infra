@@ -140,7 +140,7 @@ module "linehaul" {
   bucket_name = "linehaul-logs"
   queue_name  = "linehaul-log-events"
   bigquery_creds = "${var.linehaul_creds}"
-  bigquery_table = "the-psf.pypidev.simple_requests"
+  bigquery_table = "the-psf.pypi.simple_requests"
 }
 
 
