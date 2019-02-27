@@ -125,7 +125,7 @@ module "file-hosting" {
   s3_logging_keys = "${var.fastly_s3_logging}"
 
   linehaul = {
-    address = "linehaul01.iad1.psf.io"
+    address = "linehaul.nyc1.psf.io"
     port    = 48175
     token   = "${var.linehaul_token}"
   }
