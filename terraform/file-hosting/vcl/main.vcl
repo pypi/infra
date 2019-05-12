@@ -176,11 +176,17 @@ sub vcl_deliver {
 
     # If we're not executing a shielding request, and the URL is one of our file
     # URLs, and it's a GET request, and the response is either a 200 or a 304
-    # then we want to log an event stating that a download has taken place.
+    # then...
     if (!req.http.Fastly-FF
             && req.url.path ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/"
             && req.request == "GET"
             && http_status_matches(resp.status, "200")) {
+
+        # We want to set CORS headers allowing files to be loaded cross-origin
+        set resp.http.Access-Control-Allow-Methods = "GET";
+        set resp.http.Access-Control-Allow-Origin = "*";
+
+        # And we want to log an event stating that a download has taken place.
         log {"syslog "} req.service_id {" linehaul :: "} "2@" now "|" geoip.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
     }
 
