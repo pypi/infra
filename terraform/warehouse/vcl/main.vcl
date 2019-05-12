@@ -39,14 +39,16 @@ sub vcl_recv {
     # This will match any URL except those that start with:
     #
     #   * /admin/
+    #   * /manage/
     #   * /search/
     #   * /account/login/
     #   * /account/logout/
     #   * /account/register/
     #   * /account/reset-password/
     #   * /account/verify-email/
+    #   * /account/two-factor/
     #   * /pypi
-    if (req.url.path !~ "^/(admin/|search(/|$)|account/(login|logout|register|reset-password|verify-email|two-factor)/|pypi)") {
+    if (req.url.path !~ "^/(admin/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|two-factor)/|pypi)") {
         set req.url = req.url.path;
     }
 
