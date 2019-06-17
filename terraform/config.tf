@@ -17,6 +17,7 @@ provider "aws" {
 
 
 provider "fastly" {
+  version = "~> 0.3.0"
   api_key = "${var.credentials["fastly"]}"
 }
 
