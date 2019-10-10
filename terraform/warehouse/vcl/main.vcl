@@ -59,6 +59,11 @@ sub vcl_recv {
     # thing, reducing cache misses due to ordering differences.
     set req.url = boltsort.sort(req.url);
 
+    # Synthesize a custom header for the locale if set, so we can vary on this
+    # instead of the entire cookie
+    if (req.http.Cookie:_LOCALE_) {
+        set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
+    }
 
 #FASTLY recv
 
