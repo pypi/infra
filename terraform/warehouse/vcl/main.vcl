@@ -39,6 +39,7 @@ sub vcl_recv {
     # This will match any URL except those that start with:
     #
     #   * /admin/
+    #   * /locale/
     #   * /manage/
     #   * /search/
     #   * /account/login/
@@ -49,7 +50,7 @@ sub vcl_recv {
     #   * /account/two-factor/
     #   * /account/webauthn-authenticate/
     #   * /pypi
-    if (req.url.path !~ "^/(admin/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|two-factor|webauthn-authenticate)/|pypi)") {
+    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|two-factor|webauthn-authenticate)/|pypi)") {
         set req.url = req.url.path;
     }
 
