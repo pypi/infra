@@ -295,6 +295,11 @@ sub vcl_deliver {
 
 #FASTLY deliver
 
+    # Hide the existence of PyPI-Locale header from downstream
+    if (resp.http.Vary && !req.http.Fastly-FF) {
+        set resp.http.Vary = regsub(resp.http.Vary, "PyPI-Locale", "Cookie");
+    }
+
     # Unset headers that we don't need/want to send on to the client because
     # they are not generally useful.
     unset resp.http.Via;
