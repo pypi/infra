@@ -66,7 +66,7 @@ sub vcl_recv {
         # Default to english for cached content
         set req.http.PyPI-Locale = "en";
 
-        if (req.http.Cookie:_LOCALE_) {
+        if (req.http.Cookie:_LOCALE_ && req.http.Cookie:_LOCALE_ != "") {
             set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
         }
     }
