@@ -59,6 +59,11 @@ sub vcl_recv {
     # thing, reducing cache misses due to ordering differences.
     set req.url = boltsort.sort(req.url);
 
+    # Strip Accept-Language headers from request, the backends currently attempt
+    # to respect this, but we're not setup for it yet... in VCL or otherwise.
+    # This leads to us caching translated content in the default locale (en).
+    unset req.http.Accept-Language;
+
     # Synthesize a custom header for the locale if set, so we can vary on this
     # instead of the entire cookie, only do this on the edge. Shields should
     # ignore cookies.
