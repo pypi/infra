@@ -60,13 +60,15 @@ sub vcl_recv {
     set req.url = boltsort.sort(req.url);
 
     # Synthesize a custom header for the locale if set, so we can vary on this
-    # instead of the entire cookie
-    if (req.http.Cookie:_LOCALE_) {
-        set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
-    }
-    else {
+    # instead of the entire cookie, only do this on the edge. Shields should
+    # ignore cookies.
+    if (!req.http.Fastly-FF) {
         # Default to english for cached content
         set req.http.PyPI-Locale = "en";
+
+        if (req.http.Cookie:_LOCALE_) {
+            set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
+        }
     }
 
 #FASTLY recv
