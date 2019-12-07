@@ -136,20 +136,20 @@ sub vcl_recv {
     # thing, reducing cache misses due to ordering differences.
     set req.url = boltsort.sort(req.url);
 
-    # Strip Accept-Language headers from request, the backends currently attempt
-    # to respect this, but we're not setup for it yet... in VCL or otherwise.
-    # This leads to us caching translated content in the default locale (en).
-    unset req.http.Accept-Language;
-
     # Synthesize a custom header for the locale if set, so we can vary on this
     # instead of the entire cookie, only do this on the edge. Shields should
     # ignore cookies.
     if (!req.http.Fastly-FF) {
-        # Default to english for cached content
-        set req.http.PyPI-Locale = "en";
-
         if (req.http.Cookie:_LOCALE_ && req.http.Cookie:_LOCALE_ != "") {
+            # Cookie language always wins
             set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
+        } else {
+            # Lookup in Accept-Language header
+            set req.http.PyPI-Locale = accept.language_lookup("en:es:fr:ja:pt-BR:uk:el:de", "en", req.http.Accept-Language);
+            if (!req.http.PyPI-Locale) {
+                # Fallback to english if no other language matches
+                set req.http.PyPI-Locale = "en";
+            }
         }
     }
 
