@@ -64,13 +64,13 @@ sub vcl_recv {
     # ignore cookies.
     if (!req.http.Fastly-FF) {
         if (req.http.Cookie:_LOCALE_ && req.http.Cookie:_LOCALE_ != "") {
-            # Cookie language always wins
+            # If set, language from cookie always wins
             set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
         } else {
-            # Lookup in Accept-Language header
+            # Lookup in Accept-Language header, fallback to "en" if no match found in supported languages
             set req.http.PyPI-Locale = accept.language_lookup("en:es:fr:ja:pt-BR:uk:el:de", "en", req.http.Accept-Language);
             if (!req.http.PyPI-Locale) {
-                # Fallback to english if no other language matches
+                # Safety-check: If PyPI-Locale is empty, default to "en"
                 set req.http.PyPI-Locale = "en";
             }
         }
