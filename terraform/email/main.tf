@@ -58,7 +58,7 @@ resource "aws_route53_record" "primary_amazonses_dmarc_record" {
   zone_id = "${var.zone_id}"
   name    = "_dmarc.${var.domain}"
   type    = "TXT"
-  ttl     = "60"
+  ttl     = "1800"
   records = ["v=DMARC1; p=none; rua=${var.dmarc}; fo=1; adkim=s; aspf=r"]
 }
 
@@ -66,7 +66,7 @@ resource "aws_route53_record" "primary_amazonses_mx_record" {
   zone_id = "${var.zone_id}"
   name    = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
   type    = "MX"
-  ttl     = "600"
+  ttl     = "1800"
   records = ["10 feedback-smtp.${data.aws_region.mail_region.name}.amazonses.com"]
 }
 
@@ -74,7 +74,7 @@ resource "aws_route53_record" "primary_amazonses_spf_record" {
   zone_id = "${var.zone_id}"
   name = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
   type = "TXT"
-  ttl = "600"
+  ttl = "1800"
   records = ["v=spf1 include:amazonses.com -all"]
 }
 
