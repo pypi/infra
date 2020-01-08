@@ -179,7 +179,7 @@ resource "aws_route53_record" "files" {
   zone_id = "${var.zone_id}"
   name    = "${var.domain}"
   type    = "${local.apex_domain ? "A" : "CNAME"}"
-  ttl     = 1800
+  ttl     = 3600
   records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
 }
 
@@ -190,6 +190,6 @@ resource "aws_route53_record" "files-ipv6" {
   zone_id = "${var.zone_id}"
   name    = "${var.domain}"
   type    = "AAAA"
-  ttl     = 1800
+  ttl     = 3600
   records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], "AAAA"))}"]}"]
 }
