@@ -6,6 +6,21 @@ resource "aws_sqs_queue" "pypi_worker" {
   visibility_timeout_seconds = 300
 }
 
+resource "aws_sqs_queue" "pypi_worker_default" {
+  name                       = "${lower(var.name)}-worker-default"
+  # We're going to set this to 5 minutes, which basically means that if a worker
+  # hasn't completed the task within 5 minutes, then SQS will make it visible for
+  # another work to accept it.
+  visibility_timeout_seconds = 300
+}
+
+resource "aws_sqs_queue" "pypi_worker_malware" {
+  name                       = "${lower(var.name)}-worker-malware"
+  # We're going to set this to 5 minutes, which basically means that if a worker
+  # hasn't completed the task within 5 minutes, then SQS will make it visible for
+  # another work to accept it.
+  visibility_timeout_seconds = 300
+}
 
 resource "aws_iam_policy" "pypi_worker" {
   name        = "${var.name}WorkerSQS"
@@ -32,7 +47,11 @@ resource "aws_iam_policy" "pypi_worker" {
           "sqs:ReceiveMessage",
           "sqs:SendMessage"
       ],
-      "Resource": "${aws_sqs_queue.pypi_worker.arn}"
+      "Resource": [
+          "${aws_sqs_queue.pypi_worker.arn}",
+          "${aws_sqs_queue.pypi_worker_default.arn}",
+          "${aws_sqs_queue.pypi_worker_malware.arn}"
+      ]
     }
   ]
 }
