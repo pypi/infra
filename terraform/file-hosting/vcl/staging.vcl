@@ -72,7 +72,7 @@ sub vcl_recv {
     # If our file request is being dispatched to GCS, setup the request to correctly
     # access GCS and authorize ourselves with GCS interoperability credentials.
     if (req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
-        # Setup our environment to better match what S3 expects/needs
+        # Setup our environment to better match what GCS expects/needs for S3 interoperability
         set req.http.Host = var.GCS-Bucket-Name ".storage.googleapis.com";
         set req.http.Date = now;
         set req.url = regsuball(req.url, "\+", urlencode("+"));
