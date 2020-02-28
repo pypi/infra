@@ -2,6 +2,7 @@ sub vcl_recv {
     declare local var.AWS-Access-Key-ID STRING;
     declare local var.AWS-Secret-Access-Key STRING;
     declare local var.S3-Bucket-Name STRING;
+
     declare local var.GCS-Access-Key-ID STRING;
     declare local var.GCS-Secret-Access-Key STRING;
     declare local var.GCS-Bucket-Name STRING;
