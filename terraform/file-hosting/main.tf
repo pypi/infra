@@ -194,11 +194,30 @@ resource "fastly_service_v1" "files" {
   }
 
   backend {
-    name              = "S3"
+    name              = "GCS"
     auto_loadbalance  = false
     shield            = "sea-wa-us"
 
     request_condition = "Package File"
+    healthcheck       = "GCS Health"
+
+    address           = "${var.files_bucket}.storage.googleapis.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.files_bucket}.storage.googleapis.com"
+    ssl_sni_hostname  = "${var.files_bucket}.storage.googleapis.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
+    name              = "S3"
+    auto_loadbalance  = false
+    shield            = "sea-wa-us"
+
     healthcheck       = "S3 Health"
 
     address           = "${var.files_bucket}.s3.amazonaws.com"
@@ -229,6 +248,20 @@ resource "fastly_service_v1" "files" {
 
     connect_timeout   = 3000
     error_threshold   = 5
+  }
+
+  healthcheck {
+    name   = "GCS Health"
+
+    host   = "${var.files_bucket}.storage.googleapis.com"
+    method = "GET"
+    path   = "/_health.txt"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
   }
 
   healthcheck {

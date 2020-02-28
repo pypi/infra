@@ -48,6 +48,14 @@ sub vcl_recv {
         error 803 "SSL is required";
     }
 
+    # Check if our request was restarted for a package URL due to a 404,
+    # Change our backend to S3 to look for the file there, re-enable clustering and continue
+    # https://www.slideshare.net/Fastly/advanced-vcl-how-to-use-restart
+    if (req.restarts > 0 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+      set req.backend = F_S3;
+      set req.http.Fastly-Force-Shield = "1";
+    }
+
     # Requests that are for an *actual* file get disaptched to Amazon S3 instead of
     # to our typical backends. We need to setup the request to correctly access
     # S3 and to authorize ourselves to S3.
@@ -60,6 +68,18 @@ sub vcl_recv {
         # Compute the Authorization header that S3 requires to be able to
         # access the files stored there.
         set req.http.Authorization = "AWS " var.AWS-Access-Key-ID ":" digest.hmac_sha1_base64(var.AWS-Secret-Access-Key, "GET" LF LF LF req.http.Date LF "/" var.S3-Bucket-Name req.url.path);
+    }
+    # If our file request is being dispatched to GCS, setup the request to correctly
+    # access GCS and authorize ourselves with GCS interoperability credentials.
+    if (req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        # Setup our environment to better match what S3 expects/needs
+        set req.http.Host = var.GCS-Bucket-Name ".storage.googleapis.com";
+        set req.http.Date = now;
+        set req.url = regsuball(req.url, "\+", urlencode("+"));
+
+        # Compute the Authorization header that GCS requires to be able to
+        # access the files stored there.
+        set req.http.Authorization = "AWS " var.GCS-Access-Key-ID ":" digest.hmac_sha1_base64(var.GCS-Secret-Access-Key, "GET" LF LF LF req.http.Date LF "/" var.GCS-Bucket-Name req.url.path);
     }
 
     # Do not bother to attempt to run the caching mechanisms for methods that
@@ -81,6 +101,12 @@ sub vcl_fetch {
     # list of cacheable status codes.
     if (http_status_matches(beresp.status, "303,307,308")) {
         set beresp.cacheable = true;
+    }
+
+    # If we successfully got a 404 response from GCS for a Package URL restart
+    # to check S3 for the file!
+    if (req.restarts == 0 && req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/" && http_status_matches(beresp.status, "404")) {
+      restart;
     }
 
     # Handle 5XX (or any other unwanted status code)
@@ -114,6 +140,8 @@ sub vcl_fetch {
     # When we're fetching our files, we want to give them a super long Cache-Control
     # header. We can't add these by default in S3, but we can add them here.
     if (beresp.status == 200 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        # Google sets an Expires header for private requests, we should drop this.
+        unset beresp.http.expires;
         set beresp.http.Cache-Control = "max-age=365000000, immutable, public";
         set beresp.ttl = 365000000s;
     }
@@ -197,7 +225,7 @@ sub vcl_deliver {
         log {"syslog "} req.service_id {" linehaul :: "} "2@" now "|" geoip.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
     }
 
-    # Unset a few headers set by Amazon that we don't really have a need/desire
+    # Unset a few headers set by Amazon/Google that we don't really have a need/desire
     # to send to clients.
     if (!req.http.Fastly-FF) {
         unset resp.http.x-amz-replication-status;
@@ -205,6 +233,8 @@ sub vcl_deliver {
         unset resp.http.x-amz-meta-version;
         unset resp.http.x-amz-meta-package-type;
         unset resp.http.x-amz-meta-project;
+        unset resp.http.x-guploader-uploadid;
+        unset resp.http.x-goog-storage-class;
     }
 
     return(deliver);

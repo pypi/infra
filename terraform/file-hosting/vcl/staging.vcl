@@ -2,6 +2,7 @@ sub vcl_recv {
     declare local var.AWS-Access-Key-ID STRING;
     declare local var.AWS-Secret-Access-Key STRING;
     declare local var.S3-Bucket-Name STRING;
+
     declare local var.GCS-Access-Key-ID STRING;
     declare local var.GCS-Secret-Access-Key STRING;
     declare local var.GCS-Bucket-Name STRING;
@@ -47,6 +48,9 @@ sub vcl_recv {
         error 803 "SSL is required";
     }
 
+    # Check if our request was restarted for a package URL due to a 404,
+    # Change our backend to S3 to look for the file there, re-enable clustering and continue
+    # https://www.slideshare.net/Fastly/advanced-vcl-how-to-use-restart
     if (req.restarts > 0 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
       set req.backend = F_S3;
       set req.http.Fastly-Force-Shield = "1";
@@ -65,6 +69,8 @@ sub vcl_recv {
         # access the files stored there.
         set req.http.Authorization = "AWS " var.AWS-Access-Key-ID ":" digest.hmac_sha1_base64(var.AWS-Secret-Access-Key, "GET" LF LF LF req.http.Date LF "/" var.S3-Bucket-Name req.url.path);
     }
+    # If our file request is being dispatched to GCS, setup the request to correctly
+    # access GCS and authorize ourselves with GCS interoperability credentials.
     if (req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
         # Setup our environment to better match what S3 expects/needs
         set req.http.Host = var.GCS-Bucket-Name ".storage.googleapis.com";
@@ -97,6 +103,8 @@ sub vcl_fetch {
         set beresp.cacheable = true;
     }
 
+    # If we successfully got a 404 response from GCS for a Package URL restart
+    # to check S3 for the file!
     if (req.restarts == 0 && req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/" && http_status_matches(beresp.status, "404")) {
       restart;
     }
