@@ -20,9 +20,10 @@ locals {
     python.map.fastly.net_CNAME = ["dualstack.python.map.fastly.net"]
   }
   domain_map {
-    pypi.org                    = "python.map.fastly.net"
-    pythonhosted.org            = "r.ssl.fastly.net"
-    files.pythonhosted.org      = "r.ssl.fastly.net"
+    pypi.org                            = "python.map.fastly.net"
+    pythonhosted.org                    = "r.ssl.fastly.net"
+    files.pythonhosted.org              = "r.ssl.fastly.net"
+    files-staging.pythonhosted.org      = "r.ssl.fastly.net"
   }
 }
 
@@ -119,6 +120,7 @@ module "file-hosting" {
 
   zone_id          = "${module.dns.user_content_zone_id}"
   domain           = "files.pythonhosted.org"
+  staging_domain   = "files-staging.pythonhosted.org"
   conveyor_address = "conveyor.cmh1.psfhosted.org"
   files_bucket     = "pypi-files"
   mirror           = "mirror.dub1.pypi.io"
