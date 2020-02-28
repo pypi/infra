@@ -132,6 +132,8 @@ sub vcl_fetch {
     # When we're fetching our files, we want to give them a super long Cache-Control
     # header. We can't add these by default in S3, but we can add them here.
     if (beresp.status == 200 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        # Google sets an Expires header for private requests, we should drop this.
+        unset beresp.http.expires;
         set beresp.http.Cache-Control = "max-age=365000000, immutable, public";
         set beresp.ttl = 365000000s;
     }
@@ -215,7 +217,7 @@ sub vcl_deliver {
         log {"syslog "} req.service_id {" linehaul :: "} "2@" now "|" geoip.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
     }
 
-    # Unset a few headers set by Amazon that we don't really have a need/desire
+    # Unset a few headers set by Amazon/Google that we don't really have a need/desire
     # to send to clients.
     if (!req.http.Fastly-FF) {
         unset resp.http.x-amz-replication-status;
@@ -223,6 +225,8 @@ sub vcl_deliver {
         unset resp.http.x-amz-meta-version;
         unset resp.http.x-amz-meta-package-type;
         unset resp.http.x-amz-meta-project;
+        unset resp.http.x-guploader-uploadid;
+        unset resp.http.x-goog-storage-class;
     }
 
     return(deliver);
