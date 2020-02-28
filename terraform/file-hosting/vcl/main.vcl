@@ -3,6 +3,10 @@ sub vcl_recv {
     declare local var.AWS-Secret-Access-Key STRING;
     declare local var.S3-Bucket-Name STRING;
 
+    declare local var.GCS-Access-Key-ID STRING;
+    declare local var.GCS-Secret-Access-Key STRING;
+    declare local var.GCS-Bucket-Name STRING;
+
     # I'm not 100% sure on what this is exactly for, it was taken from the
     # Fastly documentation, however, what I *believe* it does is just ensure
     # that we don't serve a stale copy of the page from the shield node when
