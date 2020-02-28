@@ -1,5 +1,6 @@
 variable "zone_id" { type = "string" }
 variable "domain" { type = "string" }
+variable "staging_domain" { type = "string" }
 variable "conveyor_address" { type = "string" }
 variable "files_bucket" { type = "string" }
 variable "mirror" { type = "string" }
@@ -14,6 +15,160 @@ locals {
   apex_domain = "${length(split(".", var.domain)) > 2 ? false : true}"
 }
 
+resource "fastly_service_v1" "files_staging" {
+  name = "PyPI Staging File Hosting"
+
+  domain = {
+    name = "${var.staging_domain}"
+  }
+
+  backend {
+    name              = "Conveyor"
+    shield            = "bwi-va-us"
+
+    address           = "${var.conveyor_address}"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.conveyor_address}"
+    ssl_sni_hostname  = "${var.conveyor_address}"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
+    name              = "S3"
+    auto_loadbalance  = false
+    shield            = "sea-wa-us"
+
+    healthcheck       = "S3 Health"
+
+    address           = "${var.files_bucket}.s3.amazonaws.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.files_bucket}.s3.amazonaws.com"
+    ssl_sni_hostname  = "${var.files_bucket}.s3.amazonaws.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
+    name              = "GCS"
+    auto_loadbalance  = false
+    shield            = "sea-wa-us"
+
+    request_condition = "Package File"
+    healthcheck       = "GCS Health"
+
+    address           = "${var.files_bucket}.storage.googleapis.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.files_bucket}.storage.googleapis.com"
+    ssl_sni_hostname  = "${var.files_bucket}.storage.googleapis.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
+    name              = "Mirror"
+    auto_loadbalance  = false
+    shield            = "london_city-uk"
+
+    request_condition = "Primary Failure (Mirror-able)"
+    healthcheck       = "Mirror Health"
+
+    address           = "${var.mirror}"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.mirror}"
+    ssl_sni_hostname  = "${var.mirror}"
+
+    connect_timeout   = 3000
+    error_threshold   = 5
+  }
+
+  healthcheck {
+    name   = "S3 Health"
+
+    host   = "${var.files_bucket}.s3.amazonaws.com"
+    method = "GET"
+    path   = "/_health.txt"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
+  }
+
+  healthcheck {
+    name   = "GCS Health"
+
+    host   = "${var.files_bucket}.storage.googleapis.com"
+    method = "GET"
+    path   = "/_health.txt"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
+  }
+
+  healthcheck {
+    name   = "Mirror Health"
+
+    host   = "${var.domain}"
+    method = "GET"
+    path   = "/last-modified"
+
+    check_interval = 3000
+    timeout = 2000
+    threshold = 2
+    initial = 2
+    window = 4
+  }
+
+  vcl {
+    name    = "Staging"
+    content = "${file("${path.module}/vcl/staging.vcl")}"
+    main    = true
+  }
+
+  condition {
+    name      = "Package File"
+    type      = "REQUEST"
+    statement = "req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
+    priority  = 1
+  }
+
+  condition {
+    name      = "Primary Failure (Mirror-able)"
+    type      = "REQUEST"
+    statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
+    priority  = 2
+  }
+
+  condition {
+    name = "5xx Error"
+    type = "RESPONSE"
+    statement = "(resp.status >= 500 && resp.status < 600)"
+  }
+
+  condition {
+    name      = "Never"
+    type      = "RESPONSE"
+    statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
+  }
+}
 
 resource "fastly_service_v1" "files" {
   name = "PyPI File Hosting"
@@ -172,6 +327,15 @@ resource "fastly_service_v1" "files" {
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
+}
+
+
+resource "aws_route53_record" "files-staging" {
+  zone_id = "${var.zone_id}"
+  name    = "${var.staging_domain}"
+  type    = "${local.apex_domain ? "A" : "CNAME"}"
+  ttl     = 3600
+  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.staging_domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
 }
 
 
