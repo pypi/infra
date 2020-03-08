@@ -387,7 +387,7 @@ resource "aws_route53_record" "files-staging" {
   zone_id = "${var.zone_id}"
   name    = "${var.staging_domain}"
   type    = "${local.apex_domain ? "A" : "CNAME"}"
-  ttl     = 3600
+  ttl     = 86400
   records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.staging_domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
 }
 
@@ -396,7 +396,7 @@ resource "aws_route53_record" "files" {
   zone_id = "${var.zone_id}"
   name    = "${var.domain}"
   type    = "${local.apex_domain ? "A" : "CNAME"}"
-  ttl     = 3600
+  ttl     = 86400
   records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
 }
 
@@ -407,6 +407,6 @@ resource "aws_route53_record" "files-ipv6" {
   zone_id = "${var.zone_id}"
   name    = "${var.domain}"
   type    = "AAAA"
-  ttl     = 3600
+  ttl     = 86400
   records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], "AAAA"))}"]}"]
 }
