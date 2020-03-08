@@ -5,7 +5,7 @@ variable "extra_domains" { type = "list" }
 variable "backend" { type = "string" }
 variable "mirror" { type = "string" }
 variable "s3_logging_keys" { type = "map" }
-variable "linehaul_bucket" { type = "string" }
+variable "linehaul_gcs" { type = "map" }
 
 variable "fastly_endpoints" { type = "map" }
 variable "domain_map" { type = "map" }
@@ -140,23 +140,20 @@ resource "fastly_service_v1" "pypi" {
     path           = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
   }
 
-  s3logging {
-    name           = "linehaul"
+  gcslogging {
+    name             = "Linehaul GCS"
+    bucket_name      = "${var.linehaul_gcs["bucket"]}"
+    path             = "simple/%Y/%m/%d/%H/%M/"
+    message_type     = "blank"
+    format           = "simple|%{now}V|%{geoip.country_code}V|%{req.url.path}V|%{tls.client.protocol}V|%{tls.client.cipher}V||||%{req.http.user-agent}V"
+    timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
+    gzip_level       = 9
+    period           = 300
 
-    format_version = 2
-    period         = 300
-    gzip_level     = 9
+    email            = "${var.linehaul_gcs["email"]}"
+    secret_key       = "${var.linehaul_gcs["private_key"]}"
 
-    # We actually never want this to log by default, we'll manually log to it in
-    # our VCL, but we need to set it here so that the system is configured to
-    # have it as a logger.
-    response_condition = "Never"
-
-    s3_access_key  = "${var.s3_logging_keys["access_key"]}"
-    s3_secret_key  = "${var.s3_logging_keys["secret_key"]}"
-    domain         = "s3-us-east-2.amazonaws.com"
-    bucket_name    = "${var.linehaul_bucket}"
-    path           = "/%Y/%m/%d/%H/%M/"
+    response_condition = "Linehaul Log"
   }
 
   response_object {
@@ -184,6 +181,12 @@ resource "fastly_service_v1" "pypi" {
     name = "Bandersnatch User-Agent prohibited"
     type = "REQUEST"
     statement = "req.http.user-agent ~ \"bandersnatch/1\\.(0|1|2|3)\\ \""
+  }
+
+  condition {
+    name = "Linehaul Log"
+    type = "RESPONSE"
+    statement = "!req.http.Fastly-FF && req.url.path ~ \"^/simple/.+/\" && req.request == \"GET\" && http_status_matches(resp.status, \"200,304\")"
   }
 
   condition {

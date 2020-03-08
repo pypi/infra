@@ -318,16 +318,6 @@ sub vcl_deliver {
     # https://tools.ietf.org/html/rfc7234#section-4.2.3
     unset resp.http.Age;
 
-    # If we're not executing a shielding request, and the URL is one of our file
-    # URLs, and it's a GET request, and the response is either a 200 or a 304
-    # then we want to log an event stating that a download has taken place.
-    if (!req.http.Fastly-FF
-            && req.url.path ~ "^/simple/.+/"
-            && req.request == "GET"
-            && http_status_matches(resp.status, "200,304")) {
-        log {"syslog "} req.service_id {" linehaul :: "} "3@" "simple" "|" now "|" geoip.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" req.http.user-agent;
-    }
-
     # Set our standard security headers, we do this in VCL rather than in
     # Warehouse itself so that we always get these headers, regardless of the
     # origin server being used.

@@ -1,5 +1,6 @@
 variable "linehaul_token" { type = "string" }
 variable "linehaul_creds" { type = "string" }
+variable "linehaul_gcs_private_key" { type = "string" }
 variable "fastly_s3_logging" { type = "map" }
 
 locals {
@@ -107,8 +108,13 @@ module "pypi" {
   extra_domains   = ["www.pypi.org", "pypi.python.org", "pypi.io", "www.pypi.io", "warehouse.python.org"]
   backend         = "warehouse.cmh1.psfhosted.org"
   mirror          = "mirror.dub1.pypi.io"
-  linehaul_bucket = "linehaul-logs"
   s3_logging_keys = "${var.fastly_s3_logging}"
+
+  linehaul_gcs = {
+    bucket      = "linehaul-logs"
+    email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
+    private_key = "${var.linehaul_gcs_private_key}"
+  }
 
   fastly_endpoints = "${local.fastly_endpoints}"
   domain_map       = "${local.domain_map}"
@@ -130,6 +136,11 @@ module "file-hosting" {
     address = "linehaul.nyc1.psf.io"
     port    = 48175
     token   = "${var.linehaul_token}"
+  }
+  linehaul_gcs = {
+    bucket      = "linehaul-logs"
+    email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
+    private_key = "${var.linehaul_gcs_private_key}"
   }
 
   fastly_endpoints = "${local.fastly_endpoints}"

@@ -223,6 +223,7 @@ sub vcl_deliver {
 
         # And we want to log an event stating that a download has taken place.
         log {"syslog "} req.service_id {" linehaul :: "} "2@" now "|" geoip.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
+        log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" geoip.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
     }
 
     # Unset a few headers set by Amazon/Google that we don't really have a need/desire
