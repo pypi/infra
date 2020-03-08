@@ -5,6 +5,7 @@ variable "conveyor_address" { type = "string" }
 variable "files_bucket" { type = "string" }
 variable "mirror" { type = "string" }
 variable "linehaul" { type = "map" }
+variable "linehaul_gcs" { type = "map" }
 variable "s3_logging_keys" { type = "map" }
 
 variable "fastly_endpoints" { type = "map" }
@@ -310,6 +311,25 @@ resource "fastly_service_v1" "files" {
     tls_ca_cert  = "${replace(file("${path.module}/certs/linehaul.pem"), "/\n$/", "")}"
 
     format_version = "2"
+
+    # We actually never want this to log by default, we'll manually log to it in
+    # our VCL, but we need to set it here so that the system is configured to
+    # have it as a logger.
+    response_condition = "Never"
+  }
+
+  gcslogging {
+    name             = "Linehaul GCS"
+    bucket_name      = "${var.linehaul_gcs["bucket"]}"
+    path             = "downloads/%Y/%m/%d/%H/%M/"
+    message_type     = "blank"
+    format           = "download|%{now}V|%{geoip.country_code}V|%{req.url.path}V|%{tls.client.protocol}V|%{tls.client.cipher}V|%{resp.http.x-amz-meta-project}V|%{resp.http.x-amz-meta-version}V|%{resp.http.x-amz-meta-package-type}V|%{req.http.user-agent}V"
+    timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
+    gzip_level       = 9
+    period           = 300
+
+    email            = "${var.linehaul_gcs["email"]}"
+    secret_key       = "${var.linehaul_gcs["private_key"]}"
 
     # We actually never want this to log by default, we'll manually log to it in
     # our VCL, but we need to set it here so that the system is configured to

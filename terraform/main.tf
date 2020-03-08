@@ -1,5 +1,6 @@
 variable "linehaul_token" { type = "string" }
 variable "linehaul_creds" { type = "string" }
+variable "linehaul_gcs_private_key" { type = "string" }
 variable "fastly_s3_logging" { type = "map" }
 
 locals {
@@ -130,6 +131,11 @@ module "file-hosting" {
     address = "linehaul.nyc1.psf.io"
     port    = 48175
     token   = "${var.linehaul_token}"
+  }
+  linehaul_gcs = {
+    bucket      = "linehaul-logs"
+    email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
+    private_key = "${var.linehaul_gcs_private_key}"
   }
 
   fastly_endpoints = "${local.fastly_endpoints}"
