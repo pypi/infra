@@ -19,7 +19,7 @@ resource "aws_route53_record" "caa" {
     zone_id = "${aws_route53_zone.primary.zone_id}"
     name    = "${var.primary_domain}"
     type    = "CAA"
-    ttl     = 60
+    ttl     = 3600
     records = "${concat(formatlist("0 issue \"%s\"", var.caa_issuers), list("0 iodef \"${var.caa_report_uri}\""))}"
 }
 
@@ -27,7 +27,7 @@ resource "aws_route53_record" "apex_txt" {
   zone_id = "${aws_route53_zone.primary.zone_id}"
   name    = "${var.primary_domain}"
   type    = "TXT"
-  ttl     = 60
+  ttl     = 3600
   records = "${var.apex_txt}"
 }
 
@@ -42,7 +42,7 @@ resource "aws_route53_record" "user_content_caa" {
     zone_id = "${aws_route53_zone.user_content.zone_id}"
     name    = "${var.user_content_domain}"
     type    = "CAA"
-    ttl     = 60
+    ttl     = 3600
     records = "${concat(formatlist("0 issue \"%s\"", var.caa_issuers), list("0 iodef \"${var.caa_report_uri}\""))}"
 }
 

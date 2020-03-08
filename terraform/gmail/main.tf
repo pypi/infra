@@ -10,7 +10,7 @@ resource "aws_route53_record" "gmail_mx" {
   zone_id = "${var.zone_id}"
   name    = "${var.domain}"
   type    = "MX"
-  ttl     = "1800"
+  ttl     = "3600"
   records = [
     "1 ASPMX.L.GOOGLE.COM.",
     "5 ALT1.ASPMX.L.GOOGLE.COM.",
@@ -25,6 +25,6 @@ resource "aws_route53_record" "primary_amazonses_dkim_record" {
   zone_id = "${var.zone_id}"
   name    = "${var.dkim_host_name}.${var.domain}"
   type    = "TXT"
-  ttl     = "1800"
+  ttl     = "3600"
   records = ["${var.dkim_txt_record}"]
 }

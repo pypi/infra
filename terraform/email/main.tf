@@ -39,7 +39,7 @@ resource "aws_route53_record" "primary_amazonses_verification_record" {
   zone_id = "${var.zone_id}"
   name    = "_amazonses.${var.domain}"
   type    = "TXT"
-  ttl     = "1800"
+  ttl     = "3600"
   records = ["${aws_ses_domain_identity.primary.verification_token}"]
 }
 
@@ -49,7 +49,7 @@ resource "aws_route53_record" "primary_amazonses_dkim_record" {
   zone_id = "${var.zone_id}"
   name    = "${element(aws_ses_domain_dkim.primary.dkim_tokens, count.index)}._domainkey.${var.domain}"
   type    = "CNAME"
-  ttl     = "1800"
+  ttl     = "3600"
   records = ["${element(aws_ses_domain_dkim.primary.dkim_tokens, count.index)}.dkim.amazonses.com"]
 }
 
@@ -58,7 +58,7 @@ resource "aws_route53_record" "primary_amazonses_dmarc_record" {
   zone_id = "${var.zone_id}"
   name    = "_dmarc.${var.domain}"
   type    = "TXT"
-  ttl     = "1800"
+  ttl     = "3600"
   records = ["v=DMARC1; p=none; rua=${var.dmarc}; fo=1; adkim=s; aspf=r"]
 }
 
@@ -66,7 +66,7 @@ resource "aws_route53_record" "primary_amazonses_mx_record" {
   zone_id = "${var.zone_id}"
   name    = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
   type    = "MX"
-  ttl     = "1800"
+  ttl     = "3600"
   records = ["10 feedback-smtp.${data.aws_region.mail_region.name}.amazonses.com"]
 }
 
@@ -74,7 +74,7 @@ resource "aws_route53_record" "primary_amazonses_spf_record" {
   zone_id = "${var.zone_id}"
   name = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
   type = "TXT"
-  ttl = "1800"
+  ttl = "3600"
   records = ["v=spf1 include:amazonses.com -all"]
 }
 
