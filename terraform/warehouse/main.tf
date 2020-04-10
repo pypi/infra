@@ -82,8 +82,8 @@ resource "fastly_service_v1" "pypi" {
     method = "GET"
     path   = "/_health/"
 
-    check_interval = 3000
-    timeout = 2000
+    check_interval = 6000
+    timeout = 4000
     threshold = 2
     initial = 2
     window = 4
