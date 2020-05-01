@@ -50,7 +50,7 @@ sub vcl_recv {
     #   * /account/two-factor/
     #   * /account/webauthn-authenticate/
     #   * /pypi
-    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|two-factor|webauthn-authenticate)/|pypi)") {
+    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|two-factor|webauthn-authenticate|recovery-code)/|pypi)") {
         set req.url = req.url.path;
     }
 
