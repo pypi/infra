@@ -146,6 +146,12 @@ sub vcl_recv {
         }
     }
 
+    # There is some goofy tool that is slamming us with requests from go-http-client User-Agents
+    # that causes redirect storms when it runs.
+    if (req.http.User-Agent ~ "^[gG]o-http-client" && req.url ~ "^/simple" && req.url !~ "/$") {
+      error 666 "go-http-client redirect";
+    }
+
     # We have a number of items that we'll pass back to the origin.
     # Set a header to tell the backend if we're using https or http.
     if (req.http.Fastly-SSL) {
@@ -367,6 +373,11 @@ sub vcl_error {
         set obj.http.Content-Type = "text/html; charset=UTF-8";
         synthetic {"<html><head><title>308 Permanent Redirect</title></head><body><center><h1>308 Permanent Redirect</h1></center></body></html>"};
         return(deliver);
+    } else if (obj.status == 666) {
+        set obj.status = 406;
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"Go-http-client User-Agents are currently blocked from accessing /simple resources without a trailing slash. This causes a redirect to the canonicalized URL with the trailing slash. PyPI maintainers have been struggling to handle a piece of software with this User-Agent overloading our backends with requests resulting in redirects. Please contact admin@pypi.org if you have information regarding what this software may be."};
+        return (deliver);
     }
 
 }
