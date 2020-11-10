@@ -1,25 +1,25 @@
 resource "aws_sqs_queue" "pypi_worker" {
   name                       = "${lower(var.name)}-worker"
-  # We're going to set this to 5 minutes, which basically means that if a worker
-  # hasn't completed the task within 5 minutes, then SQS will make it visible for
+  # We're going to set this to 15 minutes, which basically means that if a worker
+  # hasn't completed the task within 15 minutes, then SQS will make it visible for
   # another work to accept it.
-  visibility_timeout_seconds = 300
+  visibility_timeout_seconds = 900
 }
 
 resource "aws_sqs_queue" "pypi_worker_default" {
   name                       = "${lower(var.name)}-worker-default"
-  # We're going to set this to 5 minutes, which basically means that if a worker
-  # hasn't completed the task within 5 minutes, then SQS will make it visible for
+  # We're going to set this to 15 minutes, which basically means that if a worker
+  # hasn't completed the task within 15 minutes, then SQS will make it visible for
   # another work to accept it.
-  visibility_timeout_seconds = 300
+  visibility_timeout_seconds = 900
 }
 
 resource "aws_sqs_queue" "pypi_worker_malware" {
   name                       = "${lower(var.name)}-worker-malware"
-  # We're going to set this to 5 minutes, which basically means that if a worker
-  # hasn't completed the task within 5 minutes, then SQS will make it visible for
+  # We're going to set this to 15 minutes, which basically means that if a worker
+  # hasn't completed the task within 15 minutes, then SQS will make it visible for
   # another work to accept it.
-  visibility_timeout_seconds = 300
+  visibility_timeout_seconds = 900
 }
 
 resource "aws_iam_policy" "pypi_worker" {
