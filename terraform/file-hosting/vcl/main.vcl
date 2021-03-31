@@ -45,7 +45,34 @@ sub vcl_recv {
     # We want to Force SSL for the WebUI by returning an error code directing people
     # to instead use HTTPS.
     if (!req.http.Fastly-SSL) {
-        error 803 "SSL is required";
+        error 603 "SSL is required";
+    }
+
+    # Implement rolling brownouts of non-SNI support described in https://github.com/pypa/pypi-support/issues/978
+    if (!req.http.Fastly-FF && tls.client.servername == "") {
+        if (time.is_after(now, std.time("2021-05-03 12:00:00", std.integer2time(-1)))) {
+            error 604 "SNI is required";
+        } else if (time.is_after(now, std.time("2021-04-28 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 21) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 51))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-21 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 16) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 46))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-14 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 16) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 41))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-07 12:00:00", std.integer2time(-1)))) {
+            if (std.atoi(strftime({"%M"}, now)) < 16) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-03-31 12:00:00", std.integer2time(-1)))) {
+            if (std.atoi(strftime({"%M"}, now)) < 11) {
+                error 604 "SNI is required";
+            }
+        }
     }
 
     # Check if our request was restarted for a package URL due to a 404,
@@ -256,11 +283,19 @@ sub vcl_error {
 
     # Handle our "error" conditions which are really just ways to set synthetic
     # responses.
-    if (obj.status == 803) {
+    if (obj.status == 603) {
         set obj.status = 403;
         set obj.response = "SSL is required";
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"SSL is required."};
+        return (deliver);
+    }
+
+    if (obj.status == 604 ) {
+        set obj.status = 403;
+        set obj.response = "[[[!!! BREAKING CHANGE !!!]]] Support for clients that do not support Server Name Indication is temporarily disabled and will be permanently deprecated soon. See https://status.python.org/incidents/hzmjhqsdjqgb and https://github.com/pypa/pypi-support/issues/978 [[[!!! END BREAKING CHANGE !!!]]]";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"[[[!!! BREAKING CHANGE !!!]]] Support for clients that do not support Server Name Indication is temporarily disabled and will be permanently deprecated soon. See https://status.python.org/incidents/hzmjhqsdjqgb and https://github.com/pypa/pypi-support/issues/978 [[[!!! END BREAKING CHANGE !!!]]]"};
         return (deliver);
     }
 
