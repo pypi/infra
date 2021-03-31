@@ -116,6 +116,33 @@ sub vcl_recv {
         }
     }
 
+    # Implement rolling brownouts of non-SNI support described in https://github.com/pypa/pypi-support/issues/978
+    if (!req.http.Fastly-FF && tls.client.servername == "") {
+        if (time.is_after(now, std.time("2021-05-03 12:00:00", std.integer2time(-1)))) {
+            error 604 "SNI is required";
+        } else if (time.is_after(now, std.time("2021-04-28 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 21) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 51))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-21 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 16) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 46))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-14 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 16) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 41))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-07 12:00:00", std.integer2time(-1)))) {
+            if (std.atoi(strftime({"%M"}, now)) < 16) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-03-31 12:00:00", std.integer2time(-1)))) {
+            if (std.atoi(strftime({"%M"}, now)) < 11) {
+                error 604 "SNI is required";
+            }
+        }
+    }
+
     # Disable XMLRPC Search
     if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
         req.http.Content-Type ~ "text/xml" &&
@@ -367,6 +394,12 @@ sub vcl_error {
         set obj.response = "SSL is required";
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"SSL is required."};
+        return (deliver);
+    } else if (obj.status == 604 ) {
+        set obj.status = 403;
+        set obj.response = "[[[!!! BREAKING CHANGE !!!]]] Support for clients that do not support Server Name Indication is temporarily disabled and will be permanently deprecated soon. See https://status.python.org/incidents/hzmjhqsdjqgb and https://github.com/pypa/pypi-support/issues/978 [[[!!! END BREAKING CHANGE !!!]]]";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"[[[!!! BREAKING CHANGE !!!]]] Support for clients that do not support Server Name Indication is temporarily disabled and will be permanently deprecated soon. See https://status.python.org/incidents/hzmjhqsdjqgb and https://github.com/pypa/pypi-support/issues/978 [[[!!! END BREAKING CHANGE !!!]]]"};
         return (deliver);
     } else if (obj.status == 650) {
         set obj.status = 301;
