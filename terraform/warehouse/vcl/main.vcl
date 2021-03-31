@@ -86,17 +86,17 @@ sub vcl_recv {
 
         # The /simple/ and /packages/ API.
         if (req.url ~ "^/(simple|packages)") {
-            error 803 "SSL is required";
+            error 603 "SSL is required";
         }
 
         # The Legacy JSON API.
         if (req.url ~ "^/pypi/.+/json$") {
-            error 803 "SSL is required";
+            error 603 "SSL is required";
         }
 
         # The Legacy ?:action= API.
         if (req.url ~ "^/pypi.*(\?|&)=:action") {
-            error 803 "SSL is required";
+            error 603 "SSL is required";
         }
 
         # If we're on the /pypi page and we've received something other than a
@@ -113,6 +113,33 @@ sub vcl_recv {
             # This isn't a /pypi URL so we'll just unconditionally redirect to
             # HTTPS.
             error 801 "Force SSL";
+        }
+    }
+
+    # Implement rolling brownouts of non-SNI support described in https://github.com/pypa/pypi-support/issues/978
+    if (!req.http.Fastly-FF && tls.client.servername == "") {
+        if (time.is_after(now, std.time("2021-05-03 12:00:00", std.integer2time(-1)))) {
+            error 604 "SNI is required";
+        } else if (time.is_after(now, std.time("2021-04-28 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 21) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 51))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-21 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 16) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 46))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-14 12:00:00", std.integer2time(-1)))) {
+            if ((std.atoi(strftime({"%M"}, now)) < 16) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 41))) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-04-07 12:00:00", std.integer2time(-1)))) {
+            if (std.atoi(strftime({"%M"}, now)) < 16) {
+                error 604 "SNI is required";
+            }
+        } else if (time.is_after(now, std.time("2021-03-31 12:00:00", std.integer2time(-1)))) {
+            if (std.atoi(strftime({"%M"}, now)) < 11) {
+                error 604 "SNI is required";
+            }
         }
     }
 
@@ -136,7 +163,7 @@ sub vcl_recv {
         if (req.request == "GET" || req.request == "HEAD") {
             # Handle our GET/HEAD requests with a 301 redirect.
             set req.http.Location = "https://pypi.org" req.url;
-            error 750 "Redirect to Primary Domain";
+            error 650 "Redirect to Primary Domain";
         } else if (req.request == "POST" &&
                    std.tolower(req.http.host) == "pypi.python.org" &&
                    (req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
@@ -149,7 +176,7 @@ sub vcl_recv {
         } else {
             # Finally, handle our other methods with a 308 redirect.
             set req.http.Location = "https://pypi.org" req.url;
-            error 751 "Redirect to Primary Domain";
+            error 651 "Redirect to Primary Domain";
         }
     }
 
@@ -235,8 +262,8 @@ sub vcl_fetch {
 
 
     # Trigger a "SSL is required" error if the backend has indicated to do so.
-    if (beresp.http.X-Fastly-Error == "803") {
-        error 803 "SSL is required";
+    if (beresp.http.X-Fastly-Error == "603") {
+        error 603 "SSL is required";
     }
 
     # If we've gotten a 502 or a 503 from the backend, we'll go ahead and retry
@@ -362,19 +389,25 @@ sub vcl_error {
         return(deliver);
     }
 
-    if (obj.status == 803) {
+    if (obj.status == 603) {
         set obj.status = 403;
         set obj.response = "SSL is required";
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"SSL is required."};
         return (deliver);
-    } else if (obj.status == 750) {
+    } else if (obj.status == 604 ) {
+        set obj.status = 403;
+        set obj.response = "[[[!!! BREAKING CHANGE !!!]]] Support for clients that do not support Server Name Indication is temporarily disabled and will be permanently deprecated soon. See https://status.python.org/incidents/hzmjhqsdjqgb and https://github.com/pypa/pypi-support/issues/978 [[[!!! END BREAKING CHANGE !!!]]]";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"[[[!!! BREAKING CHANGE !!!]]] Support for clients that do not support Server Name Indication is temporarily disabled and will be permanently deprecated soon. See https://status.python.org/incidents/hzmjhqsdjqgb and https://github.com/pypa/pypi-support/issues/978 [[[!!! END BREAKING CHANGE !!!]]]"};
+        return (deliver);
+    } else if (obj.status == 650) {
         set obj.status = 301;
         set obj.http.Location = req.http.Location;
         set obj.http.Content-Type = "text/html; charset=UTF-8";
         synthetic {"<html><head><title>301 Moved Permanently</title></head><body><center><h1>301 Moved Permanently</h1></center></body></html>"};
         return(deliver);
-    } else if (obj.status == 751) {
+    } else if (obj.status == 651) {
         set obj.status = 308;
         set obj.http.Location = req.http.Location;
         set obj.http.Content-Type = "text/html; charset=UTF-8";
