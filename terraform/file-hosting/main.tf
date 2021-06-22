@@ -326,7 +326,7 @@ resource "fastly_service_v1" "files" {
     format           = "download|%{now}V|%{geoip.country_code}V|%{req.url.path}V|%{tls.client.protocol}V|%{tls.client.cipher}V|%{resp.http.x-amz-meta-project}V|%{resp.http.x-amz-meta-version}V|%{resp.http.x-amz-meta-package-type}V|%{req.http.user-agent}V"
     timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
     gzip_level       = 9
-    period           = 300
+    period           = 120
 
     email            = "${var.linehaul_gcs["email"]}"
     secret_key       = "${var.linehaul_gcs["private_key"]}"
