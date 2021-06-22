@@ -1,5 +1,3 @@
-variable "linehaul_token" { type = "string" }
-variable "linehaul_creds" { type = "string" }
 variable "linehaul_gcs_private_key" { type = "string" }
 variable "fastly_s3_logging" { type = "map" }
 
@@ -132,11 +130,6 @@ module "file-hosting" {
   mirror           = "mirror.dub1.pypi.io"
   s3_logging_keys = "${var.fastly_s3_logging}"
 
-  linehaul = {
-    address = "linehaul.nyc1.psf.io"
-    port    = 48175
-    token   = "${var.linehaul_token}"
-  }
   linehaul_gcs = {
     bucket      = "linehaul-logs"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
@@ -145,15 +138,6 @@ module "file-hosting" {
 
   fastly_endpoints = "${local.fastly_endpoints}"
   domain_map       = "${local.domain_map}"
-}
-
-module "linehaul" {
-  source = "./linehaul"
-
-  bucket_name = "linehaul-logs"
-  queue_name  = "linehaul-log-events"
-  bigquery_creds = "${var.linehaul_creds}"
-  bigquery_table = "the-psf.pypi.simple_requests"
 }
 
 
@@ -166,17 +150,6 @@ module "docs-hosting" {
 
   fastly_endpoints = "${local.fastly_endpoints}"
   domain_map       = "${local.domain_map}"
-}
-
-module "lambda-deployer" {
-  source = "./lambda-deployer"
-
-  bucket_name = "pypi-lambdas"
-  queue_name  = "pypi-lambdas-events"
-
-  functions = [
-    "linehaul",
-  ]
 }
 
 
