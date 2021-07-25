@@ -210,12 +210,12 @@ sub vcl_deliver {
     set resp.http.X-Robots-Header = "noindex";
 
     # If we're not executing a shielding request, and the URL is one of our file
-    # URLs, and it's a GET request, and the response is either a 200 or a 304
+    # URLs, and it's a GET request, and the response is either a 200 or a 206
     # then...
     if (!req.http.Fastly-FF
             && req.url.path ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/"
             && req.request == "GET"
-            && http_status_matches(resp.status, "200")) {
+            && http_status_matches(resp.status, "200,206")) {
 
         # We want to set CORS headers allowing files to be loaded cross-origin
         set resp.http.Access-Control-Allow-Methods = "GET";
