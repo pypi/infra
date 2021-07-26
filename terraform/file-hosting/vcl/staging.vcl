@@ -214,11 +214,13 @@ sub vcl_deliver {
     # then...
     if (!req.http.Fastly-FF
             && req.url.path ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/"
-            && req.request == "GET"
+            && (req.request == "GET" || req.request == "OPTIONS")
             && http_status_matches(resp.status, "200,206")) {
 
         # We want to set CORS headers allowing files to be loaded cross-origin
-        set resp.http.Access-Control-Allow-Methods = "GET";
+        unset resp.http.X-Permitted-Cross-Domain-Policies;
+        set resp.http.Access-Control-Allow-Methods = "GET, OPTIONS";
+        set resp.http.Access-Control-Allow-Headers= "Range";
         set resp.http.Access-Control-Allow-Origin = "*";
 
         # And we want to log an event stating that a download has taken place.
