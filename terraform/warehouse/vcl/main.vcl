@@ -121,13 +121,6 @@ sub vcl_recv {
         error 604 "SNI is required";
     }
 
-    # Disable XMLRPC Search
-    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
-        req.http.Content-Type ~ "text/xml" &&
-        req.body ~ "<methodName>search</methodName>") {
-            error 667 "Disable XMLRPC Search";
-    }
-
     # We need to redirect all of the existing domain names to the new domain name,
     # this includes the temporary domain names that Warehouse had, as well as the
     # existing legacy domain name. This is purposely being done *after* the HTTPS
@@ -395,11 +388,6 @@ sub vcl_error {
         set obj.status = 406;
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"Go-http-client User-Agents are currently blocked from accessing /simple resources without a trailing slash. This causes a redirect to the canonicalized URL with the trailing slash. PyPI maintainers have been struggling to handle a piece of software with this User-Agent overloading our backends with requests resulting in redirects. Please contact admin@pypi.org if you have information regarding what this software may be."};
-        return (deliver);
-    } else if (obj.status == 667) {
-        set obj.status = 200;
-        set obj.http.Content-Type = "text/xml; charset=UTF-8";
-        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI's XMLRPC API is currently disabled due to unmanageable load and will be deprecated in the near future. See https://status.python.org/ for more information.</string></value></member></struct></value></fault></methodResponse>";
         return (deliver);
     }
 
