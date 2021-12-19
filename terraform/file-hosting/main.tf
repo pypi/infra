@@ -24,6 +24,7 @@ resource "fastly_service_v1" "files_staging" {
 
   backend {
     name              = "Conveyor"
+    auto_loadbalance  = true
     shield            = "bwi-va-us"
 
     address           = "${var.conveyor_address}"
@@ -41,6 +42,7 @@ resource "fastly_service_v1" "files_staging" {
   backend {
     name              = "S3"
     auto_loadbalance  = false
+    request_condition = "NeverReq"
     shield            = "sea-wa-us"
 
     healthcheck       = "S3 Health"
@@ -158,6 +160,12 @@ resource "fastly_service_v1" "files_staging" {
   }
 
   condition {
+    name      = "NeverReq"
+    type      = "REQUEST"
+    statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
+  }
+
+  condition {
     name = "5xx Error"
     type = "RESPONSE"
     statement = "(resp.status >= 500 && resp.status < 600)"
@@ -179,6 +187,7 @@ resource "fastly_service_v1" "files" {
 
   backend {
     name              = "Conveyor"
+    auto_loadbalance  = true
     shield            = "bwi-va-us"
 
     address           = "${var.conveyor_address}"
@@ -216,6 +225,7 @@ resource "fastly_service_v1" "files" {
   backend {
     name              = "S3"
     auto_loadbalance  = false
+    request_condition = "NeverReq"
     shield            = "sea-wa-us"
 
     healthcheck       = "S3 Health"
@@ -348,6 +358,12 @@ resource "fastly_service_v1" "files" {
     type      = "REQUEST"
     statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
     priority  = 2
+  }
+
+  condition {
+    name      = "NeverReq"
+    type      = "REQUEST"
+    statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
 
   condition {
