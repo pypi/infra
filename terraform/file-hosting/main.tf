@@ -25,7 +25,7 @@ resource "fastly_service_v1" "files_staging" {
   backend {
     name              = "Conveyor"
     auto_loadbalance  = true
-    shield            = "bwi-va-us"
+    shield            = "iad-va-us"
 
     address           = "${var.conveyor_address}"
     port              = 443
@@ -188,7 +188,7 @@ resource "fastly_service_v1" "files" {
   backend {
     name              = "Conveyor"
     auto_loadbalance  = true
-    shield            = "bwi-va-us"
+    shield            = "iad-va-us"
 
     address           = "${var.conveyor_address}"
     port              = 443

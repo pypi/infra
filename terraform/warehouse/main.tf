@@ -39,7 +39,7 @@ resource "fastly_service_v1" "pypi" {
 
   backend {
     name             = "Application"
-    shield           = "bwi-va-us"
+    shield           = "iad-va-us"
 
     healthcheck      = "Application Health"
 

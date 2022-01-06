@@ -20,7 +20,7 @@ resource "fastly_service_v1" "docs" {
 
   backend {
     name              = "Conveyor"
-    shield            = "bwi-va-us"
+    shield            = "iad-va-us"
 
     address           = "${var.conveyor_address}"
     port              = 443
