@@ -163,6 +163,9 @@ sub vcl_recv {
     if (req.http.User-Agent ~ "^[gG]o-http-client" && req.url ~ "^/simple" && req.url !~ "/$") {
       error 666 "go-http-client redirect";
     }
+    if (req.http.User-Agent == "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36" && req.url ~ "^/simple" && req.url !~ "/$") {
+      error 668 "mock-webkit-client redirect";
+    }
 
     # We have a number of items that we'll pass back to the origin.
     # Set a header to tell the backend if we're using https or http.
@@ -400,6 +403,11 @@ sub vcl_error {
         set obj.status = 200;
         set obj.http.Content-Type = "text/xml; charset=UTF-8";
         synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI's XMLRPC API is currently disabled due to unmanageable load and will be deprecated in the near future. See https://status.python.org/ for more information.</string></value></member></struct></value></fault></methodResponse>";
+        return (deliver);
+    } else if (obj.status == 668) {
+        set obj.status = 406;
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"Mock WebKit User-Agents are currently blocked from accessing /simple resources without a trailing slash. This causes a redirect to the canonicalized URL with the trailing slash. PyPI maintainers have been struggling to handle a piece of software with this User-Agent overloading our backends with requests resulting in redirects. Please contact admin@pypi.org if you have information regarding what this software may be."};
         return (deliver);
     }
 
