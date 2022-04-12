@@ -21,7 +21,8 @@ locals {
 
 resource "fastly_service_vcl" "files_staging" {
   name     = "PyPI Staging File Hosting"
-  activate = false
+  # Set to false for spicy changes
+  activate = true
 
   domain {
     name = var.staging_domain
@@ -207,7 +208,8 @@ resource "fastly_service_vcl" "files_staging" {
 
 resource "fastly_service_vcl" "files" {
   name     = "PyPI File Hosting"
-  activate = false
+  # Set to false for spicy changes
+  activate = true
 
   domain {
     name = var.domain
