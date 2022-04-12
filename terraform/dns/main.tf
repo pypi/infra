@@ -56,6 +56,6 @@ resource "aws_route53_record" "user_content_caa" {
 }
 
 
-output "nameservers" { value = ["${aws_route53_delegation_set.ns.name_servers}"] }
+output "nameservers" { value = aws_route53_delegation_set.ns.name_servers }
 output "primary_zone_id" { value = aws_route53_zone.primary.zone_id }
 output "user_content_zone_id" { value = aws_route53_zone.user_content.zone_id }

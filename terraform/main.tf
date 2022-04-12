@@ -152,6 +152,6 @@ module "docs-hosting" {
 }
 
 
-output "nameservers" { value = ["${module.dns.nameservers}"] }
+output "nameservers" { value = module.dns.nameservers }
 output "pypi-ses_delivery_topic" { value = module.email.delivery_topic }
 output "testpypi-ses_delivery_topic" { value = module.testpypi-email.delivery_topic }
