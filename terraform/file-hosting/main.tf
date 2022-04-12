@@ -381,7 +381,7 @@ resource "fastly_service_vcl" "files" {
   logging_s3 {
     name = "S3 Error Logs"
 
-    format         = "%%h \"%%{now}V\" %%l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %%>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %%D \"%%{fastly_info.state}V\""
+    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %D \"%%{fastly_info.state}V\""
     format_version = 2
     gzip_level     = 9
 

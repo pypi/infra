@@ -113,7 +113,7 @@ resource "fastly_service_vcl" "pypi" {
   logging_s3 {
     name = "S3 Logs"
 
-    format         = "%%h \"%%{now}V\" %%l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %%>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\""
+    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\""
     format_version = 2
     gzip_level     = 9
 
@@ -127,7 +127,7 @@ resource "fastly_service_vcl" "pypi" {
   logging_s3 {
     name = "S3 Error Logs"
 
-    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %%>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %%D \"%%{fastly_info.state}V\" \"%%{req.restarts}V\" \"%%{req.backend}V\""
+    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %D \"%%{fastly_info.state}V\" \"%%{req.restarts}V\" \"%%{req.backend}V\""
     format_version = 2
     gzip_level     = 9
 
