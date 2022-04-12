@@ -1,6 +1,35 @@
-variable "credentials" { type = map(any) }
-variable "linehaul_token" { type = string }
-variable "linehaul_creds" { type = string }
+variable "credentials" {
+  type      = map(any)
+  sensitive = true
+}
+variable "linehaul_token" {
+  type      = string
+  sensitive = true
+}
+variable "linehaul_creds" {
+  type      = string
+  sensitive = true
+}
+variable "aws_access_key_id" {
+  type      = string
+  sensitive = true
+}
+variable "aws_secret_access_key" {
+  type      = string
+  sensitive = true
+}
+variable "gcs_access_key_id" {
+  type      = string
+  sensitive = true
+}
+variable "gcs_secret_access_key" {
+  type      = string
+  sensitive = true
+}
+variable "warehouse_token" {
+  type      = string
+  sensitive = true
+}
 
 
 terraform {

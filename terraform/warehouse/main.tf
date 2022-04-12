@@ -6,6 +6,7 @@ variable "backend" { type = string }
 variable "mirror" { type = string }
 variable "s3_logging_keys" { type = map(any) }
 variable "linehaul_gcs" { type = map(any) }
+variable "warehouse_token" { type = string }
 
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
@@ -28,6 +29,13 @@ resource "fastly_service_vcl" "pypi" {
   domain { name = var.extra_domains[2] }
   domain { name = var.extra_domains[3] }
   domain { name = var.extra_domains[4] }
+
+  snippet {
+    content  = "set req.http.Warehouse-Token = \"${var.warehouse_token}\";"
+    name     = "Warehouse Token"
+    priority = 100
+    type     = "recv"
+  }
 
   backend {
     name             = "Application"

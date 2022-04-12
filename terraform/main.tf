@@ -100,6 +100,8 @@ module "pypi" {
   mirror          = "mirror.dub1.pypi.io"
   s3_logging_keys = var.fastly_s3_logging
 
+  warehouse_token = var.warehouse_token
+
   linehaul_gcs = {
     bucket      = "linehaul-logs"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
@@ -121,6 +123,11 @@ module "file-hosting" {
   files_bucket     = "pypi-files"
   mirror           = "mirror.dub1.pypi.io"
   s3_logging_keys  = var.fastly_s3_logging
+
+  aws_access_key_id     = var.aws_access_key_id
+  aws_secret_access_key = var.aws_secret_access_key
+  gcs_access_key_id     = var.gcs_access_key_id
+  gcs_secret_access_key = var.gcs_secret_access_key
 
   linehaul_gcs = {
     bucket      = "linehaul-logs"

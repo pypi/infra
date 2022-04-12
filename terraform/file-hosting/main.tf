@@ -6,6 +6,10 @@ variable "files_bucket" { type = string }
 variable "mirror" { type = string }
 variable "linehaul_gcs" { type = map(any) }
 variable "s3_logging_keys" { type = map(any) }
+variable "aws_access_key_id" { type = string }
+variable "aws_secret_access_key" { type = string }
+variable "gcs_access_key_id" { type = string }
+variable "gcs_secret_access_key" { type = string }
 
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
@@ -21,6 +25,28 @@ resource "fastly_service_vcl" "files_staging" {
 
   domain {
     name = var.staging_domain
+  }
+
+  snippet {
+    name     = "GCS"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.GCS-Access-Key-ID = "${var.gcs_access_key_id}";
+        set var.GCS-Secret-Access-Key = "${var.gcs_secret_access_key}";
+        set var.GCS-Bucket-Name = "${var.files_bucket}";
+    EOT
+  }
+
+  snippet {
+    name     = "AWS"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.AWS-Access-Key-ID = "${var.aws_access_key_id}";
+        set var.AWS-Secret-Access-Key = "${var.aws_secret_access_key}";
+        set var.AWS-Bucket-Name = "${var.files_bucket}";
+    EOT
   }
 
   backend {
@@ -185,6 +211,28 @@ resource "fastly_service_vcl" "files" {
 
   domain {
     name = var.domain
+  }
+
+  snippet {
+    name     = "GCS"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.GCS-Access-Key-ID = "${var.gcs_access_key_id}";
+        set var.GCS-Secret-Access-Key = "${var.gcs_secret_access_key}";
+        set var.GCS-Bucket-Name = "${var.files_bucket}";
+    EOT
+  }
+
+  snippet {
+    name     = "AWS"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.AWS-Access-Key-ID = "${var.aws_access_key_id}";
+        set var.AWS-Secret-Access-Key = "${var.aws_secret_access_key}";
+        set var.AWS-Bucket-Name = "${var.files_bucket}";
+    EOT
   }
 
   backend {
