@@ -1,10 +1,10 @@
 variable "sitename" { default = "PyPI" }
-variable "zone_id" { type = "string" }
-variable "domain" { type = "string" }
-variable "conveyor_address" { type = "string" }
+variable "zone_id" { type = string }
+variable "domain" { type = string }
+variable "conveyor_address" { type = string }
 
-variable "fastly_endpoints" { type = "map" }
-variable "domain_map" { type = "map" }
+variable "fastly_endpoints" { type = map }
+variable "domain_map" { type = map }
 
 
 locals {
@@ -12,7 +12,7 @@ locals {
 }
 
 
-resource "fastly_service_v1" "docs" {
+resource "fastly_service_vcl" "docs" {
   name        = "${var.sitename} Docs Hosting"
   default_ttl = 86400  # 1 day
 
@@ -44,7 +44,7 @@ resource "aws_route53_record" "docs" {
   name    = "${var.domain}"
   type    = "${local.apex_domain ? "A" : "CNAME"}"
   ttl     = 86400
-  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"])]
 }
 
 
@@ -55,5 +55,5 @@ resource "aws_route53_record" "docs-ipv6" {
   name    = "${var.domain}"
   type    = "AAAA"
   ttl     = 86400
-  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], "AAAA"))}"]}"]
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.domain], "AAAA"])]
 }

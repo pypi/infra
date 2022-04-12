@@ -1,5 +1,5 @@
-variable "linehaul_gcs_private_key" { type = "string" }
-variable "fastly_s3_logging" { type = "map" }
+variable "linehaul_gcs_private_key" { type = string }
+variable "fastly_s3_logging" { type = map }
 
 locals {
   tags = {
@@ -10,19 +10,19 @@ locals {
 
 
 locals {
-  fastly_endpoints {
-    r.ssl.fastly.net_A      = ["151.101.1.63", "151.101.65.63", "151.101.129.63", "151.101.193.63"]
-    r.ssl.fastly.net_AAAA   = ["2a04:4e42::319", "2a04:4e42:200::319", "2a04:4e42:400::319", "2a04:4e42:600::319"]
-    r.ssl.fastly.net_CNAME  = ["dualstack.r.ssl.global.fastly.net"]
-    python.map.fastly.net_A     = ["151.101.128.223", "151.101.192.223", "151.101.0.223", "151.101.64.223"]
-    python.map.fastly.net_AAAA  = ["2a04:4e42:200::223", "2a04:4e42:400::223", "2a04:4e42:600::223", "2a04:4e42::223"]
-    python.map.fastly.net_CNAME = ["dualstack.python.map.fastly.net"]
+  fastly_endpoints = {
+    "r.ssl.fastly.net_A"      = ["151.101.1.63", "151.101.65.63", "151.101.129.63", "151.101.193.63"]
+    "r.ssl.fastly.net_AAAA"   = ["2a04:4e42::319", "2a04:4e42:200::319", "2a04:4e42:400::319", "2a04:4e42:600::319"]
+    "r.ssl.fastly.net_CNAME"  = ["dualstack.r.ssl.global.fastly.net"]
+    "python.map.fastly.net_A"     = ["151.101.128.223", "151.101.192.223", "151.101.0.223", "151.101.64.223"]
+    "python.map.fastly.net_AAAA"  = ["2a04:4e42:200::223", "2a04:4e42:400::223", "2a04:4e42:600::223", "2a04:4e42::223"]
+    "python.map.fastly.net_CNAME" = ["dualstack.python.map.fastly.net"]
   }
-  domain_map {
-    pypi.org                            = "python.map.fastly.net"
-    pythonhosted.org                    = "r.ssl.fastly.net"
-    files.pythonhosted.org              = "r.ssl.fastly.net"
-    files-staging.pythonhosted.org      = "r.ssl.fastly.net"
+  domain_map = {
+    "pypi.org"                            = "python.map.fastly.net"
+    "pythonhosted.org"                    = "r.ssl.fastly.net"
+    "files.pythonhosted.org"              = "r.ssl.fastly.net"
+    "files-staging.pythonhosted.org"      = "r.ssl.fastly.net"
   }
 }
 
@@ -30,7 +30,7 @@ locals {
 module "dns" {
   source = "./dns"
 
-  tags = "${local.tags}"
+  tags = local.tags
 
   primary_domain = "pypi.org"
   user_content_domain = "pythonhosted.org"
@@ -63,10 +63,6 @@ module "gmail" {
 
 module "email" {
   source = "./email"
-  providers = {
-    "aws" = "aws"
-    "aws.email" = "aws.us-west-2"
-  }
 
   name         = "pypi"
   display_name = "PyPI"
@@ -79,10 +75,6 @@ module "email" {
 
 module "testpypi-email" {
   source = "./email"
-  providers = {
-    "aws" = "aws"
-    "aws.email" = "aws.us-west-2"
-  }
 
   name         = "testpypi"
   display_name = "TestPyPI"

@@ -1,24 +1,24 @@
-variable "zone_id" { type = "string" }
-variable "domain" { type = "string" }
-variable "staging_domain" { type = "string" }
-variable "conveyor_address" { type = "string" }
-variable "files_bucket" { type = "string" }
-variable "mirror" { type = "string" }
-variable "linehaul_gcs" { type = "map" }
-variable "s3_logging_keys" { type = "map" }
+variable "zone_id" { type = string }
+variable "domain" { type = string }
+variable "staging_domain" { type = string }
+variable "conveyor_address" { type = string }
+variable "files_bucket" { type = string }
+variable "mirror" { type = string }
+variable "linehaul_gcs" { type = map }
+variable "s3_logging_keys" { type = map }
 
-variable "fastly_endpoints" { type = "map" }
-variable "domain_map" { type = "map" }
+variable "fastly_endpoints" { type = map }
+variable "domain_map" { type = map }
 
 
 locals {
   apex_domain = "${length(split(".", var.domain)) > 2 ? false : true}"
 }
 
-resource "fastly_service_v1" "files_staging" {
+resource "fastly_service_vcl" "files_staging" {
   name = "PyPI Staging File Hosting"
 
-  domain = {
+  domain {
     name = "${var.staging_domain}"
   }
 
@@ -178,7 +178,7 @@ resource "fastly_service_v1" "files_staging" {
   }
 }
 
-resource "fastly_service_v1" "files" {
+resource "fastly_service_vcl" "files" {
   name = "PyPI File Hosting"
 
   domain {
@@ -309,17 +309,17 @@ resource "fastly_service_v1" "files" {
     main    = true
   }
 
-  gcslogging {
+  logging_gcs {
     name             = "Linehaul GCS"
     bucket_name      = "${var.linehaul_gcs["bucket"]}"
-    path             = "downloads/%Y/%m/%d/%H/%M/"
+    path             = "downloads/%%Y/%%m/%%d/%%H/%%M/"
     message_type     = "blank"
-    format           = "download|%{now}V|%{geoip.country_code}V|%{req.url.path}V|%{tls.client.protocol}V|%{tls.client.cipher}V|%{resp.http.x-amz-meta-project}V|%{resp.http.x-amz-meta-version}V|%{resp.http.x-amz-meta-package-type}V|%{req.http.user-agent}V"
-    timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
+    format           = "download|%%{now}V|%%{geoip.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V|%%{resp.http.x-amz-meta-project}V|%%{resp.http.x-amz-meta-version}V|%%{resp.http.x-amz-meta-package-type}V|%%{req.http.user-agent}V"
+    timestamp_format = "%%Y-%%m-%%dT%%H:%%M:%%S.000"
     gzip_level       = 9
     period           = 120
 
-    email            = "${var.linehaul_gcs["email"]}"
+    user             = "${var.linehaul_gcs["email"]}"
     secret_key       = "${var.linehaul_gcs["private_key"]}"
 
     # We actually never want this to log by default, we'll manually log to it in
@@ -328,10 +328,10 @@ resource "fastly_service_v1" "files" {
     response_condition = "Never"
   }
 
-  s3logging {
+  logging_s3 {
     name           = "S3 Error Logs"
 
-    format         = "%h \"%{now}V\" %l \"%{req.request}V %{req.url}V\" %{req.proto}V %>s %{resp.http.Content-Length}V %{resp.http.age}V \"%{resp.http.x-cache}V\" \"%{resp.http.x-cache-hits}V\" \"%{req.http.content-type}V\" \"%{req.http.accept-language}V\" \"%{cstr_escape(req.http.user-agent)}V\" %D \"%{fastly_info.state}V\""
+    format         = "%%h \"%%{now}V\" %%l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %%>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %%D \"%%{fastly_info.state}V\""
     format_version = 2
     gzip_level     = 9
 
@@ -342,7 +342,7 @@ resource "fastly_service_v1" "files" {
     s3_secret_key  = "${var.s3_logging_keys["secret_key"]}"
     domain         = "s3-eu-west-1.amazonaws.com"
     bucket_name    = "psf-fastly-logs-eu-west-1"
-    path           = "/files-pythonhosted-org-errors/%Y/%m/%d/%H/%M/"
+    path           = "/files-pythonhosted-org-errors/%%Y/%%m/%%d/%%H/%%M/"
   }
 
 
@@ -385,7 +385,7 @@ resource "aws_route53_record" "files-staging" {
   name    = "${var.staging_domain}"
   type    = "${local.apex_domain ? "A" : "CNAME"}"
   ttl     = 86400
-  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.staging_domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.staging_domain], local.apex_domain ? "A" : "CNAME"])]
 }
 
 
@@ -394,7 +394,7 @@ resource "aws_route53_record" "files" {
   name    = "${var.domain}"
   type    = "${local.apex_domain ? "A" : "CNAME"}"
   ttl     = 86400
-  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"])]
 }
 
 
@@ -405,5 +405,5 @@ resource "aws_route53_record" "files-ipv6" {
   name    = "${var.domain}"
   type    = "AAAA"
   ttl     = 86400
-  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], "AAAA"))}"]}"]
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.domain], "AAAA"])]
 }

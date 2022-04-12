@@ -1,9 +1,17 @@
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+    }
+  }
+  required_version = ">= 0.13"
+}
 
-variable "domain" { type = "string" }
-variable "zone_id" { type = "string" }
+variable "domain" { type = string }
+variable "zone_id" { type = string }
 
-variable "dkim_host_name" { type = "string" }
-variable "dkim_txt_record" { type = "string" }
+variable "dkim_host_name" { type = string }
+variable "dkim_txt_record" { type = string }
 
 
 resource "aws_route53_record" "gmail_mx" {
