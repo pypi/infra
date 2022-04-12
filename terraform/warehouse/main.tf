@@ -1,53 +1,55 @@
-variable "name" { type = "string" }
-variable "zone_id" { type = "string" }
-variable "domain" { type = "string" }
-variable "extra_domains" { type = "list" }
-variable "backend" { type = "string" }
-variable "mirror" { type = "string" }
-variable "s3_logging_keys" { type = "map" }
-variable "linehaul_gcs" { type = "map" }
+variable "name" { type = string }
+variable "zone_id" { type = string }
+variable "domain" { type = string }
+variable "extra_domains" { type = list(any) }
+variable "backend" { type = string }
+variable "mirror" { type = string }
+variable "s3_logging_keys" { type = map(any) }
+variable "linehaul_gcs" { type = map(any) }
+variable "warehouse_token" { type = string }
 
-variable "fastly_endpoints" { type = "map" }
-variable "domain_map" { type = "map" }
+variable "fastly_endpoints" { type = map(any) }
+variable "domain_map" { type = map(any) }
 
 
 locals {
-  apex_domain = "${length(split(".", var.domain)) > 2 ? false : true}"
+  apex_domain = length(split(".", var.domain)) > 2 ? false : true
 }
 
 
-data "template_file" "main_vcl" {
-  template = "${file("${path.module}/vcl/main.vcl")}"
+resource "fastly_service_vcl" "pypi" {
+  name     = "PyPI"
+  # Set to false for spicy changes
+  activate = true
 
-  vars {
-    pretty_503 = "${file("${path.module}/html/error.html")}"
-  }
-}
-
-
-resource "fastly_service_v1" "pypi" {
-  name = "PyPI"
-
-  domain { name = "${var.domain}" }
+  domain { name = var.domain }
 
   # Extra Domains
-  domain { name = "${var.extra_domains[0]}" }
-  domain { name = "${var.extra_domains[1]}" }
-  domain { name = "${var.extra_domains[2]}" }
-  domain { name = "${var.extra_domains[3]}" }
-  domain { name = "${var.extra_domains[4]}" }
+  domain { name = var.extra_domains[0] }
+  domain { name = var.extra_domains[1] }
+  domain { name = var.extra_domains[2] }
+  domain { name = var.extra_domains[3] }
+  domain { name = var.extra_domains[4] }
+
+  snippet {
+    content  = "set req.http.Warehouse-Token = \"${var.warehouse_token}\";"
+    name     = "Warehouse Token"
+    priority = 100
+    type     = "recv"
+  }
 
   backend {
     name             = "Application"
     shield           = "iad-va-us"
+    auto_loadbalance = true
 
-    healthcheck      = "Application Health"
+    healthcheck = "Application Health"
 
-    address           = "${var.backend}"
+    address           = var.backend
     port              = 443
     use_ssl           = true
-    ssl_cert_hostname = "${var.backend}"
-    ssl_sni_hostname  = "${var.backend}"
+    ssl_cert_hostname = var.backend
+    ssl_sni_hostname  = var.backend
 
     connect_timeout       = 5000
     first_byte_timeout    = 60000
@@ -56,18 +58,18 @@ resource "fastly_service_v1" "pypi" {
   }
 
   backend {
-    name              = "Mirror"
-    auto_loadbalance  = false
-    shield            = "london_city-uk"
+    name             = "Mirror"
+    auto_loadbalance = false
+    shield           = "london_city-uk"
 
     request_condition = "Primary Failure (Mirror-able)"
     healthcheck       = "Mirror Health"
 
-    address           = "${var.mirror}"
+    address           = var.mirror
     port              = 443
     use_ssl           = true
-    ssl_cert_hostname = "${var.mirror}"
-    ssl_sni_hostname  = "${var.mirror}"
+    ssl_cert_hostname = var.mirror
+    ssl_sni_hostname  = var.mirror
 
     connect_timeout       = 5000
     first_byte_timeout    = 60000
@@ -76,91 +78,91 @@ resource "fastly_service_v1" "pypi" {
   }
 
   healthcheck {
-    name   = "Application Health"
+    name = "Application Health"
 
-    host   = "${var.domain}"
+    host   = var.domain
     method = "GET"
     path   = "/_health/"
 
     check_interval = 6000
-    timeout = 4000
-    threshold = 2
-    initial = 2
-    window = 4
+    timeout        = 4000
+    threshold      = 2
+    initial        = 2
+    window         = 4
   }
 
   healthcheck {
-    name   = "Mirror Health"
+    name = "Mirror Health"
 
-    host   = "${var.domain}"
+    host   = var.domain
     method = "GET"
     path   = "/last-modified"
 
     check_interval = 3000
-    timeout = 2000
-    threshold = 2
-    initial = 2
-    window = 4
+    timeout        = 2000
+    threshold      = 2
+    initial        = 2
+    window         = 4
   }
 
   vcl {
     name    = "Main"
-    content = "${data.template_file.main_vcl.rendered}"
+    content = templatefile("${path.module}/vcl/main.vcl", { pretty_503 = file("${path.module}/html/error.html") })
     main    = true
   }
 
-  s3logging {
-    name           = "S3 Logs"
+  logging_s3 {
+    name = "S3 Logs"
 
-    format         = "%h \"%{now}V\" %l \"%{req.request}V %{req.url}V\" %{req.proto}V %>s %{resp.http.Content-Length}V %{resp.http.age}V \"%{resp.http.x-cache}V\" \"%{resp.http.x-cache-hits}V\" \"%{req.http.content-type}V\" \"%{req.http.accept-language}V\" \"%{cstr_escape(req.http.user-agent)}V\""
+    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\""
     format_version = 2
     gzip_level     = 9
 
-    s3_access_key  = "${var.s3_logging_keys["access_key"]}"
-    s3_secret_key  = "${var.s3_logging_keys["secret_key"]}"
-    domain         = "s3-eu-west-1.amazonaws.com"
-    bucket_name    = "psf-fastly-logs-eu-west-1"
-    path           = "/pypi-org/%Y/%m/%d/"
+    s3_access_key = var.s3_logging_keys["access_key"]
+    s3_secret_key = var.s3_logging_keys["secret_key"]
+    domain        = "s3-eu-west-1.amazonaws.com"
+    bucket_name   = "psf-fastly-logs-eu-west-1"
+    path          = "/pypi-org/%Y/%m/%d/"
   }
 
-  s3logging {
-    name           = "S3 Error Logs"
+  logging_s3 {
+    name = "S3 Error Logs"
 
-    format         = "%h \"%{now}V\" %l \"%{req.request}V %{req.url}V\" %{req.proto}V %>s %{resp.http.Content-Length}V %{resp.http.age}V \"%{resp.http.x-cache}V\" \"%{resp.http.x-cache-hits}V\" \"%{req.http.content-type}V\" \"%{req.http.accept-language}V\" \"%{cstr_escape(req.http.user-agent)}V\" %D \"%{fastly_info.state}V\" \"%{req.restarts}V\" \"%{req.backend}V\""
+    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %D \"%%{fastly_info.state}V\" \"%%{req.restarts}V\" \"%%{req.backend}V\""
     format_version = 2
     gzip_level     = 9
 
-    period         = 60
+    period             = 60
     response_condition = "5xx Error"
 
-    s3_access_key  = "${var.s3_logging_keys["access_key"]}"
-    s3_secret_key  = "${var.s3_logging_keys["secret_key"]}"
-    domain         = "s3-eu-west-1.amazonaws.com"
-    bucket_name    = "psf-fastly-logs-eu-west-1"
-    path           = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
+    s3_access_key = var.s3_logging_keys["access_key"]
+    s3_secret_key = var.s3_logging_keys["secret_key"]
+    domain        = "s3-eu-west-1.amazonaws.com"
+    bucket_name   = "psf-fastly-logs-eu-west-1"
+    path          = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
   }
 
-  gcslogging {
+  logging_gcs {
     name             = "Linehaul GCS"
-    bucket_name      = "${var.linehaul_gcs["bucket"]}"
+    bucket_name      = var.linehaul_gcs["bucket"]
     path             = "simple/%Y/%m/%d/%H/%M/"
     message_type     = "blank"
-    format           = "simple|%{now}V|%{geoip.country_code}V|%{req.url.path}V|%{tls.client.protocol}V|%{tls.client.cipher}V||||%{req.http.user-agent}V"
+    format           = "simple|%%{now}V|%%{geoip.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V||||%%{req.http.user-agent}V"
     timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
     gzip_level       = 9
     period           = 120
 
-    email            = "${var.linehaul_gcs["email"]}"
-    secret_key       = "${var.linehaul_gcs["private_key"]}"
+    user       = var.linehaul_gcs["email"]
+    secret_key = var.linehaul_gcs["private_key"]
 
     response_condition = "Linehaul Log"
   }
 
   response_object {
-    name = "Bandersnatch User-Agent prohibited"
-    status = 403
-    content = "Bandersnatch version no longer supported, upgrade to 1.4+"
-    content_type = "text/plain"
+    name              = "Bandersnatch User-Agent prohibited"
+    status            = 403
+    content           = "Bandersnatch version no longer supported, upgrade to 1.4+"
+    content_type      = "text/plain"
     request_condition = "Bandersnatch User-Agent prohibited"
   }
 
@@ -172,20 +174,20 @@ resource "fastly_service_v1" "pypi" {
   }
 
   condition {
-    name = "5xx Error"
-    type = "RESPONSE"
+    name      = "5xx Error"
+    type      = "RESPONSE"
     statement = "(resp.status >= 500 && resp.status < 600)"
   }
 
   condition {
-    name = "Bandersnatch User-Agent prohibited"
-    type = "REQUEST"
+    name      = "Bandersnatch User-Agent prohibited"
+    type      = "REQUEST"
     statement = "req.http.user-agent ~ \"bandersnatch/1\\.(0|1|2|3)\\ \""
   }
 
   condition {
-    name = "Linehaul Log"
-    type = "RESPONSE"
+    name      = "Linehaul Log"
+    type      = "RESPONSE"
     statement = "!req.http.Fastly-FF && req.url.path ~ \"^/simple/.+/\" && req.request == \"GET\" && http_status_matches(resp.status, \"200,304\")"
   }
 
@@ -198,19 +200,19 @@ resource "fastly_service_v1" "pypi" {
 
 
 resource "aws_route53_record" "primary" {
-  zone_id = "${var.zone_id}"
-  name    = "${var.domain}"
-  type    = "${local.apex_domain ? "A" : "CNAME"}"
+  zone_id = var.zone_id
+  name    = var.domain
+  type    = local.apex_domain ? "A" : "CNAME"
   ttl     = 86400
-  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"))}"]}"]
+  records = var.fastly_endpoints[join("_", concat([var.domain_map[var.domain]], [local.apex_domain ? "A" : "CNAME"]))]
 }
 
 
 resource "aws_route53_record" "primary-ipv6" {
-  count   = "${local.apex_domain ? 1 : 0}"
-  zone_id = "${var.zone_id}"
-  name    = "${var.domain}"
+  count   = local.apex_domain ? 1 : 0
+  zone_id = var.zone_id
+  name    = var.domain
   type    = "AAAA"
   ttl     = 86400
-  records = ["${var.fastly_endpoints["${join("_", list(var.domain_map[var.domain], "AAAA"))}"]}"]
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.domain], "AAAA"])]
 }

@@ -1,5 +1,5 @@
-variable "bucket_name" { type = "string" }
-variable "queue_name" { type = "string" }
+variable "bucket_name" { type = string }
+variable "queue_name" { type = string }
 variable "functions" { default = [] }
 
 locals {
@@ -8,15 +8,15 @@ locals {
 
 
 resource "aws_s3_bucket" "lambdas" {
-  bucket = "${var.bucket_name}"
+  bucket = var.bucket_name
   versioning {
-      enabled = true
+    enabled = true
   }
 }
 
 resource "aws_sqs_queue" "events" {
-  name = "${var.queue_name}"
-  visibility_timeout_seconds = "${local.timeout * 2}"
+  name                       = var.queue_name
+  visibility_timeout_seconds = local.timeout * 2
 
   policy = <<POLICY
 {
@@ -37,11 +37,11 @@ POLICY
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
-  bucket = "${aws_s3_bucket.lambdas.id}"
+  bucket = aws_s3_bucket.lambdas.id
 
   queue {
-    queue_arn     = "${aws_sqs_queue.events.arn}"
-    events        = ["s3:ObjectCreated:*"]
+    queue_arn = aws_sqs_queue.events.arn
+    events    = ["s3:ObjectCreated:*"]
   }
 }
 
@@ -66,15 +66,15 @@ EOF
 }
 
 resource "aws_lambda_function" "deployer" {
-  function_name    = "lambda-deployer"
-  role             = "${aws_iam_role.lambda.arn}"
+  function_name = "lambda-deployer"
+  role          = aws_iam_role.lambda.arn
 
   filename         = "../lambda-deployer/target/x86_64-unknown-linux-musl/release/lambda-deployer.zip"
-  source_code_hash = "${base64sha256(file("../lambda-deployer/target/x86_64-unknown-linux-musl/release/lambda-deployer.zip"))}"
+  source_code_hash = base64sha256(file("../lambda-deployer/target/x86_64-unknown-linux-musl/release/lambda-deployer.zip"))
   runtime          = "provided"
   handler          = "Provided"
 
-  timeout          = "${local.timeout}"
+  timeout = local.timeout
 }
 
 
@@ -85,8 +85,8 @@ resource "aws_cloudwatch_log_group" "deployer" {
 
 
 resource "aws_iam_policy" "lambda_logging" {
-  name = "LambdaDeployerWriteLogs"
-  path = "/"
+  name        = "LambdaDeployerWriteLogs"
+  path        = "/"
   description = "IAM policy for logging from a lambda"
 
   policy = <<EOF
@@ -108,14 +108,14 @@ EOF
 
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role = "${aws_iam_role.lambda.name}"
-  policy_arn = "${aws_iam_policy.lambda_logging.arn}"
+  role       = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.lambda_logging.arn
 }
 
 
 resource "aws_iam_policy" "lambda_sqs" {
-  name = "LambdaDeployerSQSReadDelete"
-  path = "/"
+  name        = "LambdaDeployerSQSReadDelete"
+  path        = "/"
   description = "IAM policy for reading and deleting from a SQS Queue."
 
   policy = <<EOF
@@ -139,20 +139,20 @@ EOF
 
 
 resource "aws_iam_role_policy_attachment" "lambda_sqs" {
-  role = "${aws_iam_role.lambda.name}"
-  policy_arn = "${aws_iam_policy.lambda_sqs.arn}"
+  role       = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.lambda_sqs.arn
 }
 
 
 resource "aws_lambda_event_source_mapping" "deployer" {
-  event_source_arn = "${aws_sqs_queue.events.arn}"
-  function_name    = "${aws_lambda_function.deployer.arn}"
+  event_source_arn = aws_sqs_queue.events.arn
+  function_name    = aws_lambda_function.deployer.arn
 }
 
 
 resource "aws_iam_policy" "lambda_s3" {
-  name = "LambdaDeployerS3Read"
-  path = "/"
+  name        = "LambdaDeployerS3Read"
+  path        = "/"
   description = "IAM policy for reading a S3 Bucket."
 
   policy = <<EOF
@@ -174,23 +174,23 @@ EOF
 
 
 resource "aws_iam_role_policy_attachment" "lambda_s3" {
-  role = "${aws_iam_role.lambda.name}"
-  policy_arn = "${aws_iam_policy.lambda_s3.arn}"
+  role       = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.lambda_s3.arn
 }
 
 
 # Setup permissions for the functions we expect to handle.
 
 data "aws_lambda_function" "deployed" {
-  count = "${length(var.functions)}"
-  function_name = "${element(var.functions, count.index)}"
+  count         = length(var.functions)
+  function_name = element(var.functions, count.index)
 }
 
 
 resource "aws_iam_policy" "update_deployed" {
-  count = "${length(var.functions)}"
-  name = "LambdaDeployerUpdate@${data.aws_lambda_function.deployed.*.function_name[count.index]}"
-  path = "/"
+  count       = length(var.functions)
+  name        = "LambdaDeployerUpdate@${data.aws_lambda_function.deployed.*.function_name[count.index]}"
+  path        = "/"
   description = "IAM policy for updating ${data.aws_lambda_function.deployed.*.function_name[count.index]}"
 
   policy = <<EOF
@@ -208,7 +208,7 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "update_deployed" {
-  count = "${length(var.functions)}"
-  role = "${aws_iam_role.lambda.name}"
-  policy_arn = "${aws_iam_policy.update_deployed.*.arn[count.index]}"
+  count      = length(var.functions)
+  role       = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.update_deployed.*.arn[count.index]
 }
