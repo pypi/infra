@@ -124,26 +124,29 @@ resource "aws_sns_topic_subscription" "delivery-events" {
 
 
 resource "aws_ses_identity_notification_topic" "primary-deliveries" {
-  provider          = aws.email
-  topic_arn         = aws_sns_topic.delivery-events.arn
-  notification_type = "Delivery"
-  identity          = aws_ses_domain_identity.primary.domain
+  provider                 = aws.email
+  topic_arn                = aws_sns_topic.delivery-events.arn
+  notification_type        = "Delivery"
+  identity                 = aws_ses_domain_identity.primary.domain
+  include_original_headers = true
 }
 
 
 resource "aws_ses_identity_notification_topic" "primary-bounces" {
-  provider          = aws.email
-  topic_arn         = aws_sns_topic.delivery-events.arn
-  notification_type = "Bounce"
-  identity          = aws_ses_domain_identity.primary.domain
+  provider                 = aws.email
+  topic_arn                = aws_sns_topic.delivery-events.arn
+  notification_type        = "Bounce"
+  identity                 = aws_ses_domain_identity.primary.domain
+  include_original_headers = true
 }
 
 
 resource "aws_ses_identity_notification_topic" "primary-complaints" {
-  provider          = aws.email
-  topic_arn         = aws_sns_topic.delivery-events.arn
-  notification_type = "Complaint"
-  identity          = aws_ses_domain_identity.primary.domain
+  provider                 = aws.email
+  topic_arn                = aws_sns_topic.delivery-events.arn
+  notification_type        = "Complaint"
+  identity                 = aws_ses_domain_identity.primary.domain
+  include_original_headers = true
 }
 
 

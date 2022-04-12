@@ -312,10 +312,10 @@ resource "fastly_service_vcl" "files" {
   logging_gcs {
     name             = "Linehaul GCS"
     bucket_name      = var.linehaul_gcs["bucket"]
-    path             = "downloads/%%Y/%%m/%%d/%%H/%%M/"
+    path             = "downloads/%Y/%m/%d/%H/%M/"
     message_type     = "blank"
     format           = "download|%%{now}V|%%{geoip.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V|%%{resp.http.x-amz-meta-project}V|%%{resp.http.x-amz-meta-version}V|%%{resp.http.x-amz-meta-package-type}V|%%{req.http.user-agent}V"
-    timestamp_format = "%%Y-%%m-%%dT%%H:%%M:%%S.000"
+    timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
     gzip_level       = 9
     period           = 120
 
@@ -342,7 +342,7 @@ resource "fastly_service_vcl" "files" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/files-pythonhosted-org-errors/%%Y/%%m/%%d/%%H/%%M/"
+    path          = "/files-pythonhosted-org-errors/%Y/%m/%d/%H/%M/"
   }
 
 

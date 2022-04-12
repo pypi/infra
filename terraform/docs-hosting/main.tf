@@ -19,8 +19,9 @@ resource "fastly_service_vcl" "docs" {
   domain { name = var.domain }
 
   backend {
-    name   = "Conveyor"
-    shield = "iad-va-us"
+    name             = "Conveyor"
+    shield           = "iad-va-us"
+    auto_loadbalance = true
 
     address           = var.conveyor_address
     port              = 443

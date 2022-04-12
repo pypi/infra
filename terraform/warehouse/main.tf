@@ -29,8 +29,9 @@ resource "fastly_service_vcl" "pypi" {
   domain { name = var.extra_domains[4] }
 
   backend {
-    name   = "Application"
-    shield = "iad-va-us"
+    name             = "Application"
+    shield           = "iad-va-us"
+    auto_loadbalance = true
 
     healthcheck = "Application Health"
 
@@ -111,7 +112,7 @@ resource "fastly_service_vcl" "pypi" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/pypi-org/%%Y/%%m/%%d/"
+    path          = "/pypi-org/%Y/%m/%d/"
   }
 
   logging_s3 {
@@ -128,16 +129,16 @@ resource "fastly_service_vcl" "pypi" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/pypi-org-errors/%%Y/%%m/%%d/%%H/%%M/"
+    path          = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
   }
 
   logging_gcs {
     name             = "Linehaul GCS"
     bucket_name      = var.linehaul_gcs["bucket"]
-    path             = "simple/%%Y/%%m/%%d/%%H/%%M/"
+    path             = "simple/%Y/%m/%d/%H/%M/"
     message_type     = "blank"
     format           = "simple|%%{now}V|%%{geoip.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V||||%%{req.http.user-agent}V"
-    timestamp_format = "%%Y-%%m-%%dT%%H:%%M:%%S.000"
+    timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
     gzip_level       = 9
     period           = 120
 
