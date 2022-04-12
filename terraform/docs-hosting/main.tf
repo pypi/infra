@@ -13,6 +13,7 @@ locals {
 
 
 resource "fastly_service_vcl" "docs" {
+  activate    = false
   name        = "${var.sitename} Docs Hosting"
   default_ttl = 86400 # 1 day
 
