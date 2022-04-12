@@ -1,4 +1,4 @@
-variable "credentials" { type = map }
+variable "credentials" { type = map(any) }
 variable "linehaul_token" { type = string }
 variable "linehaul_creds" { type = string }
 

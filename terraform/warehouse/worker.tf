@@ -1,5 +1,5 @@
 resource "aws_sqs_queue" "pypi_worker" {
-  name                       = "${lower(var.name)}-worker"
+  name = "${lower(var.name)}-worker"
   # We're going to set this to 15 minutes, which basically means that if a worker
   # hasn't completed the task within 15 minutes, then SQS will make it visible for
   # another work to accept it.
@@ -7,7 +7,7 @@ resource "aws_sqs_queue" "pypi_worker" {
 }
 
 resource "aws_sqs_queue" "pypi_worker_default" {
-  name                       = "${lower(var.name)}-worker-default"
+  name = "${lower(var.name)}-worker-default"
   # We're going to set this to 15 minutes, which basically means that if a worker
   # hasn't completed the task within 15 minutes, then SQS will make it visible for
   # another work to accept it.
@@ -15,7 +15,7 @@ resource "aws_sqs_queue" "pypi_worker_default" {
 }
 
 resource "aws_sqs_queue" "pypi_worker_malware" {
-  name                       = "${lower(var.name)}-worker-malware"
+  name = "${lower(var.name)}-worker-malware"
   # We're going to set this to 15 minutes, which basically means that if a worker
   # hasn't completed the task within 15 minutes, then SQS will make it visible for
   # another work to accept it.
@@ -26,7 +26,7 @@ resource "aws_iam_policy" "pypi_worker" {
   name        = "${var.name}WorkerSQS"
   description = "R/W Access to PyPI's SQS Worker Queue"
 
-  policy      = <<EOF
+  policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [

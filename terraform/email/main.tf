@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     aws = {
-      source = "hashicorp/aws"
-      configuration_aliases = [ aws.email ]
+      source                = "hashicorp/aws"
+      configuration_aliases = [aws.email]
     }
   }
 }
@@ -19,7 +19,7 @@ variable "domain" { type = string }
 variable "zone_id" { type = string }
 variable "hook_url" { type = string }
 variable "dmarc" {
-  type = string
+  type    = string
   default = ""
 }
 
@@ -30,24 +30,24 @@ data "aws_region" "mail_region" {
 
 resource "aws_ses_domain_identity" "primary" {
   provider = aws.email
-  domain   = "${var.domain}"
+  domain   = var.domain
 }
 
 
 resource "aws_ses_domain_dkim" "primary" {
   provider = aws.email
-  domain = "${aws_ses_domain_identity.primary.domain}"
+  domain   = aws_ses_domain_identity.primary.domain
 }
 
 resource "aws_ses_domain_mail_from" "primary" {
-  provider = aws.email
-  domain = "${aws_ses_domain_identity.primary.domain}"
+  provider         = aws.email
+  domain           = aws_ses_domain_identity.primary.domain
   mail_from_domain = "ses.${aws_ses_domain_identity.primary.domain}"
 }
 
 
 resource "aws_route53_record" "primary_amazonses_verification_record" {
-  zone_id = "${var.zone_id}"
+  zone_id = var.zone_id
   name    = "_amazonses.${var.domain}"
   type    = "TXT"
   ttl     = "3600"
@@ -57,7 +57,7 @@ resource "aws_route53_record" "primary_amazonses_verification_record" {
 
 resource "aws_route53_record" "primary_amazonses_dkim_record" {
   count   = 3
-  zone_id = "${var.zone_id}"
+  zone_id = var.zone_id
   name    = "${element(aws_ses_domain_dkim.primary.dkim_tokens, count.index)}._domainkey.${var.domain}"
   type    = "CNAME"
   ttl     = "3600"
@@ -65,8 +65,8 @@ resource "aws_route53_record" "primary_amazonses_dkim_record" {
 }
 
 resource "aws_route53_record" "primary_amazonses_dmarc_record" {
-  count = "${length(var.dmarc) >= 1 ? 1 : 0}"
-  zone_id = "${var.zone_id}"
+  count   = length(var.dmarc) >= 1 ? 1 : 0
+  zone_id = var.zone_id
   name    = "_dmarc.${var.domain}"
   type    = "TXT"
   ttl     = "3600"
@@ -74,25 +74,25 @@ resource "aws_route53_record" "primary_amazonses_dmarc_record" {
 }
 
 resource "aws_route53_record" "primary_amazonses_mx_record" {
-  zone_id = "${var.zone_id}"
-  name    = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
+  zone_id = var.zone_id
+  name    = aws_ses_domain_mail_from.primary.mail_from_domain
   type    = "MX"
   ttl     = "3600"
   records = ["10 feedback-smtp.${data.aws_region.mail_region.name}.amazonses.com"]
 }
 
 resource "aws_route53_record" "primary_amazonses_spf_record" {
-  zone_id = "${var.zone_id}"
-  name = "${aws_ses_domain_mail_from.primary.mail_from_domain}"
-  type = "TXT"
-  ttl = "3600"
+  zone_id = var.zone_id
+  name    = aws_ses_domain_mail_from.primary.mail_from_domain
+  type    = "TXT"
+  ttl     = "3600"
   records = ["v=spf1 include:amazonses.com -all"]
 }
 
 
 resource "aws_sns_topic" "delivery-events" {
-  provider = aws.email
-  name = "${var.name}-ses-delivery-events-topic"
+  provider     = aws.email
+  name         = "${var.name}-ses-delivery-events-topic"
   display_name = "${var.display_name} SES Delivery Events"
 
   delivery_policy = <<EOF
@@ -115,35 +115,35 @@ EOF
 
 
 resource "aws_sns_topic_subscription" "delivery-events" {
-    provider  = aws.email
-    topic_arn = "${aws_sns_topic.delivery-events.arn}"
-    protocol  = "https"
-    endpoint  = "${var.hook_url}"
-    endpoint_auto_confirms = true
+  provider               = aws.email
+  topic_arn              = aws_sns_topic.delivery-events.arn
+  protocol               = "https"
+  endpoint               = var.hook_url
+  endpoint_auto_confirms = true
 }
 
 
 resource "aws_ses_identity_notification_topic" "primary-deliveries" {
   provider          = aws.email
-  topic_arn         = "${aws_sns_topic.delivery-events.arn}"
+  topic_arn         = aws_sns_topic.delivery-events.arn
   notification_type = "Delivery"
-  identity          = "${aws_ses_domain_identity.primary.domain}"
+  identity          = aws_ses_domain_identity.primary.domain
 }
 
 
 resource "aws_ses_identity_notification_topic" "primary-bounces" {
   provider          = aws.email
-  topic_arn         = "${aws_sns_topic.delivery-events.arn}"
+  topic_arn         = aws_sns_topic.delivery-events.arn
   notification_type = "Bounce"
-  identity          = "${aws_ses_domain_identity.primary.domain}"
+  identity          = aws_ses_domain_identity.primary.domain
 }
 
 
 resource "aws_ses_identity_notification_topic" "primary-complaints" {
   provider          = aws.email
-  topic_arn         = "${aws_sns_topic.delivery-events.arn}"
+  topic_arn         = aws_sns_topic.delivery-events.arn
   notification_type = "Complaint"
-  identity          = "${aws_ses_domain_identity.primary.domain}"
+  identity          = aws_ses_domain_identity.primary.domain
 }
 
 
@@ -154,4 +154,4 @@ resource "aws_ses_identity_notification_topic" "primary-complaints" {
 #       SES domain to disable email notifications for bounces and complaints.
 
 
-output "delivery_topic" { value = "${aws_sns_topic.delivery-events.arn}" }
+output "delivery_topic" { value = aws_sns_topic.delivery-events.arn }

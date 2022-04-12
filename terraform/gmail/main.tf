@@ -15,8 +15,8 @@ variable "dkim_txt_record" { type = string }
 
 
 resource "aws_route53_record" "gmail_mx" {
-  zone_id = "${var.zone_id}"
-  name    = "${var.domain}"
+  zone_id = var.zone_id
+  name    = var.domain
   type    = "MX"
   ttl     = "3600"
   records = [
@@ -30,7 +30,7 @@ resource "aws_route53_record" "gmail_mx" {
 
 
 resource "aws_route53_record" "primary_amazonses_dkim_record" {
-  zone_id = "${var.zone_id}"
+  zone_id = var.zone_id
   name    = "${var.dkim_host_name}.${var.domain}"
   type    = "TXT"
   ttl     = "3600"
