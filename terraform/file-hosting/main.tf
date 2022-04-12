@@ -45,7 +45,7 @@ resource "fastly_service_vcl" "files_staging" {
     content  = <<-EOT
         set var.AWS-Access-Key-ID = "${var.aws_access_key_id}";
         set var.AWS-Secret-Access-Key = "${var.aws_secret_access_key}";
-        set var.AWS-Bucket-Name = "${var.files_bucket}";
+        set var.S3-Bucket-Name = "${var.files_bucket}";
     EOT
   }
 
@@ -231,7 +231,7 @@ resource "fastly_service_vcl" "files" {
     content  = <<-EOT
         set var.AWS-Access-Key-ID = "${var.aws_access_key_id}";
         set var.AWS-Secret-Access-Key = "${var.aws_secret_access_key}";
-        set var.AWS-Bucket-Name = "${var.files_bucket}";
+        set var.S3-Bucket-Name = "${var.files_bucket}";
     EOT
   }
 
