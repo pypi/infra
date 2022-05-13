@@ -54,6 +54,10 @@ sub vcl_recv {
         set req.url = req.url.path;
     }
 
+    # Remove all trailing slashes from the request URL. This means that clients
+    # will get the same response regardless of whether it ends in a slash.
+    set req.url = regsub(req.url, "/$", "");
+
     # Sort all of our query parameters, this will ensure that the same query
     # parameters in a different order will end up being represented as the same
     # thing, reducing cache misses due to ordering differences.
