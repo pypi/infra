@@ -54,9 +54,18 @@ sub vcl_recv {
         set req.url = req.url.path;
     }
 
-    # Remove all trailing slashes from the request URL. This means that clients
-    # will get the same response regardless of whether it ends in a slash.
-    set req.url = regsub(req.url, "/$", "");
+    # Remove all trailing slashes from the request URL, if the URL doesn't end
+    # in an extension. This means that clients will get the same response
+    # regardless of whether it ends in a slash.
+    if (req.url.path !~ "/$" and req.url.ext == "") {
+        # Append a trailing slash
+        set req.url = req.url.path + "/"
+
+        # Add back the query string
+        if (req.url.qs) {
+            set req.url += "?" + req.url.qs;
+        }
+    }
 
     # Sort all of our query parameters, this will ensure that the same query
     # parameters in a different order will end up being represented as the same
