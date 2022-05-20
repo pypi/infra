@@ -54,17 +54,18 @@ sub vcl_recv {
         set req.url = req.url.path;
     }
 
-    # Remove all trailing slashes from the request URL, if the URL doesn't end
-    # in an extension. This means that clients will get the same response
-    # regardless of whether it ends in a slash.
+    # Redirect to trailing slashes if the URL doesn't end in an extension,
+    # preserving query strings if present
     if (req.url.path !~ "/$" and req.url.ext == "") {
         # Append a trailing slash
-        set req.url = req.url.path + "/"
+        set req.http.Location = req.url.path + "/"
 
         # Add back the query string
         if (req.url.qs) {
-            set req.url += "?" + req.url.qs;
+            set req.http.Location += "?" + req.url.qs;
         }
+
+        error 650 "Redirect to Primary Domain";
     }
 
     # Sort all of our query parameters, this will ensure that the same query
