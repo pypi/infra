@@ -147,7 +147,7 @@ resource "fastly_service_vcl" "pypi" {
     bucket_name      = var.linehaul_gcs["bucket"]
     path             = "simple/%Y/%m/%d/%H/%M/"
     message_type     = "blank"
-    format           = "simple|%%{now}V|%%{geoip.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V||||%%{req.http.user-agent}V"
+    format           = "simple|%%{now}V|%%{client.geo.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V||||%%{req.http.user-agent}V"
     timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
     gzip_level       = 9
     period           = 120

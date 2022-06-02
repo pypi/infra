@@ -366,7 +366,7 @@ resource "fastly_service_vcl" "files" {
     bucket_name      = var.linehaul_gcs["bucket"]
     path             = "downloads/%Y/%m/%d/%H/%M/"
     message_type     = "blank"
-    format           = "download|%%{now}V|%%{geoip.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V|%%{resp.http.x-amz-meta-project}V|%%{resp.http.x-amz-meta-version}V|%%{resp.http.x-amz-meta-package-type}V|%%{req.http.user-agent}V"
+    format           = "download|%%{now}V|%%{client.geo.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V|%%{resp.http.x-amz-meta-project}V|%%{resp.http.x-amz-meta-version}V|%%{resp.http.x-amz-meta-package-type}V|%%{req.http.user-agent}V"
     timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
     gzip_level       = 9
     period           = 120
