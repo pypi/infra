@@ -33,12 +33,11 @@ variable "warehouse_token" {
 
 
 terraform {
-  backend "s3" {
-    bucket         = "pypi-infra-terraform"
-    key            = "production"
-    region         = "us-east-2"
-    dynamodb_table = "pypi-infra-terraform-locks"
-    profile        = "psf-prod"
+  cloud {
+    organization = "psf"
+    workspaces {
+      name = "pypi-infra"
+    }
   }
 }
 
