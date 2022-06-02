@@ -46,20 +46,17 @@ terraform {
 provider "aws" {
   alias   = "us-east-2"
   region  = "us-east-2"
-  profile = "psf-prod"
 }
 
 
 provider "aws" {
   alias   = "us-west-2"
   region  = "us-west-2"
-  profile = "psf-prod"
 }
 
 provider "aws" {
   alias   = "email"
   region  = "us-west-2"
-  profile = "psf-prod"
 }
 
 

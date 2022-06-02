@@ -10,7 +10,6 @@ terraform {
 provider "aws" {
   alias   = "email"
   region  = "us-west-2"
-  profile = "psf-prod"
 }
 
 variable "name" { type = string }
