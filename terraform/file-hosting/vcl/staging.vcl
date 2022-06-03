@@ -144,6 +144,10 @@ sub vcl_fetch {
         unset beresp.http.expires;
         set beresp.http.Cache-Control = "max-age=365000000, immutable, public";
         set beresp.ttl = 365000000s;
+        if (req.url == "/packages/aa/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/aaaaaaaaa-0.0.0.tar.gz") {
+            set beresp.http.Cache-Control = "max-age=0, immutable, public";
+            set beresp.ttl = 0s;
+        }
     }
 
     # If there is a Set-Cookie header, we'll ensure that we do not cache the
