@@ -71,7 +71,7 @@ sub vcl_recv {
       # Redirect to bare URL without trailing slash if the URL is for JSON API,
       # disregard any query strings since JSON endpoint does not support them.
 
-      # Remove trailing slash
+      # Remove trailing slash, drop query string
       set req.http.Location = regsub(req.url.path, "/$", "");
 
       error 650 "Redirect";
