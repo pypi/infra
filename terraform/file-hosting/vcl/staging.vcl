@@ -45,7 +45,12 @@ sub vcl_recv {
     # We want to Force SSL for the WebUI by returning an error code directing people
     # to instead use HTTPS.
     if (!req.http.Fastly-SSL) {
-        error 803 "SSL is required";
+        error 603 "SSL is required";
+    }
+
+    # Forbid clients without SNI support (Note this is disabled at Fastly's level, but provide a fallback).
+    if (!req.http.Fastly-FF && tls.client.servername == "") {
+        error 604 "SNI is required";
     }
 
     # Check if our request was restarted for a package URL due to a 404,
@@ -261,11 +266,19 @@ sub vcl_error {
 
     # Handle our "error" conditions which are really just ways to set synthetic
     # responses.
-    if (obj.status == 803) {
+    if (obj.status == 603) {
         set obj.status = 403;
         set obj.response = "SSL is required";
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"SSL is required."};
+        return (deliver);
+    }
+
+    if (obj.status == 604 ) {
+        set obj.status = 403;
+        set obj.response = "SNI is required";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"SNI is required."};
         return (deliver);
     }
 
