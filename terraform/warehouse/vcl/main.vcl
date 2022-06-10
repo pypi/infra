@@ -54,6 +54,22 @@ sub vcl_recv {
         set req.url = req.url.path;
     }
 
+    # Normalize project name in JSON API and collapse requests, redirect if
+    # trailing slash present.
+    if (req.url.path ~ "^/pypi/([^/]+)(/?[^/]+)?/json/?$") {
+        declare local var.json_url STRING;
+        if (re.group.2) {
+            set var.json_url = "/pypi/" + std.tolower(regsuball(re.group.1, "(\.|_|-)+", "-")) + re.group.2 + "/json";
+        } else {
+            set var.json_url = "/pypi/" + std.tolower(regsuball(re.group.1, "(\.|_|-)+", "-")) + "/json";
+        }
+        if (req.url.path ~ "/$") {
+            set req.http.Location = var.json_url;
+            error 650 "Redirect";
+        }
+        set req.url = var.json_url;
+    }
+
     # Sort all of our query parameters, this will ensure that the same query
     # parameters in a different order will end up being represented as the same
     # thing, reducing cache misses due to ordering differences.
