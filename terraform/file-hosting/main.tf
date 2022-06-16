@@ -71,7 +71,7 @@ resource "fastly_service_vcl" "files_staging" {
     name              = "S3"
     auto_loadbalance  = false
     request_condition = "NeverReq"
-    shield            = "sea-wa-us"
+    shield            = "bfi-wa-us"
 
     healthcheck = "S3 Health"
 
@@ -90,7 +90,7 @@ resource "fastly_service_vcl" "files_staging" {
   backend {
     name             = "GCS"
     auto_loadbalance = false
-    shield           = "sea-wa-us"
+    shield           = "bfi-wa-us"
 
     request_condition = "Package File"
     healthcheck       = "GCS Health"
@@ -257,7 +257,7 @@ resource "fastly_service_vcl" "files" {
   backend {
     name             = "GCS"
     auto_loadbalance = false
-    shield           = "sea-wa-us"
+    shield           = "bfi-wa-us"
 
     request_condition = "Package File"
     healthcheck       = "GCS Health"
@@ -278,7 +278,7 @@ resource "fastly_service_vcl" "files" {
     name              = "S3"
     auto_loadbalance  = false
     request_condition = "NeverReq"
-    shield            = "sea-wa-us"
+    shield            = "bfi-wa-us"
 
     healthcheck = "S3 Health"
 
