@@ -32,6 +32,66 @@ sub vcl_recv {
         }
     }
 
+    # We want to normalize our Accept header for our /simple/ index pages to
+    # support the content negotiation feature added in PEP 691.
+    if (req.url ~ "^/simple/" && fastly.ff.visits_this_service == 0) {
+        declare local var.query_format STRING;
+
+        set var.query_format = querystring.get(req.url, "format");
+        if (var.query_format == "text/html" ||
+                var.query_format == "application/vnd.pypi.simple.v1+html" ||
+                var.query_format == "application/vnd.pypi.simple.v1+json" ||
+                var.query_format == "application/vnd.pypi.simple.latest+html" ||
+                var.query_format == "application/vnd.pypi.simple.latest+json") {
+            set req.http.Accept = var.query_format;
+        } else {
+            # This is a little weird here, but Fastly's accept.media_lookup function
+            # has a few properties that make this odd:
+            #
+            # - Content types may only be mentioned once in the first 3 parameters.
+            # - If you have a foo/whatever type, then a default for foo/* must be
+            #   included.
+            # - You must have a fallback defined.
+            #
+            # These combined makes things awkward, because we only have a single text/*
+            # type that we support, text/html, AND we want that same type to be our
+            # ultimate fallback.
+            #
+            # It's also slightly weird to have a default for application/*, but not the
+            # end of the world.
+            #
+            # The big thing we do here is fallback to text/invalid, then later we check
+            # for that, and if iti is that, then we switch it back to text/html.
+            set req.http.Accept = accept.media_lookup(
+                "application/vnd.pypi.simple.v1+json:application/vnd.pypi.simple.latest+html:application/vnd.pypi.simple.latest+json",
+                "text/invalid",
+                "application/vnd.pypi.simple.v1+html:text/html",
+                req.http.Accept
+            );
+
+            if (req.http.Accept == "text/invalid") {
+                set req.http.Accept = "text/html";
+            }
+        }
+
+        # The "latest" versions are aliases, but they're aliases that don't get reflected in
+        # the returned Content-Type, so we do this before stashing our real Content-Type.
+        if (req.http.Accept == "application/vnd.pypi.simple.latest+html") {
+            set req.http.Accept = "application/vnd.pypi.simple.v1+html";
+        } elsif (req.http.Accept == "application/vnd.pypi.simple.latest+json") {
+            set req.http.Accept = "application/vnd.pypi.simple.v1+json";
+        }
+
+        # We want to stash what our "real" content type is, prior to doing any sort of aliasing
+        # for cache efficiency, so that we can serve it correctly.
+        set req.http.Warehouse-Real-Content-Type = req.http.Accept;
+
+        # text/html is really just application/vnd.pypi.simple.v1+html, so we'll turn it into that
+        if (req.http.Accept == "text/html") {
+            set req.http.Accept = "application/vnd.pypi.simple.v1+html";
+        }
+    }
+
     # Most of the URLs in Warehouse do not support or require any sort of query
     # parameter. If we strip these at the edge then we'll increase our cache
     # efficiency when they won't otherwise change the output of the pages.
@@ -338,6 +398,14 @@ sub vcl_deliver {
     }
 
 #FASTLY deliver
+
+    # Serve the correct Content Type, but only if our returned content type matches our
+    # accept content type.
+    if (fastly.ff.visits_this_service == 0) {
+        if (req.http.Warehouse-Real-Content-Type && resp.http.Content-Type == req.http.Accept) {
+            set resp.http.Content-Type = req.http.Warehouse-Real-Content-Type;
+        }
+    }
 
     # Hide the existence of PyPI-Locale header from downstream
     if (resp.http.Vary && !req.http.Fastly-FF) {
