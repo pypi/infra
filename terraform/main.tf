@@ -68,7 +68,7 @@ module "email" {
   display_name = "PyPI"
   zone_id      = module.dns.primary_zone_id
   domain       = "pypi.org"
-  dmarc        = "mailto:re+ahhqsxbwmkl@dmarc.postmarkapp.com"
+  dmarc        = "mailto:re+wln41pimbs0@dmarc.postmarkapp.com"
   hook_url     = "https://pypi.org/_/ses-hook/"
 }
 
@@ -80,7 +80,7 @@ module "testpypi-email" {
   display_name = "TestPyPI"
   zone_id      = module.dns.primary_zone_id
   domain       = "test.pypi.org"
-  dmarc        = "mailto:re+qjfavuizyth@dmarc.postmarkapp.com"
+  dmarc        = "mailto:re+a1s3u37pyvs@dmarc.postmarkapp.com"
   hook_url     = "https://test.pypi.org/_/ses-hook/"
 }
 

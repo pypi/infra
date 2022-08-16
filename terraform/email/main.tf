@@ -69,7 +69,7 @@ resource "aws_route53_record" "primary_amazonses_dmarc_record" {
   name    = "_dmarc.${var.domain}"
   type    = "TXT"
   ttl     = "3600"
-  records = ["v=DMARC1; p=none; rua=${var.dmarc}; fo=1; adkim=s; aspf=r"]
+  records = ["v=DMARC1; p=none; pct=100; rua=${var.dmarc}; fo=1; adkim=s; aspf=r"]
 }
 
 resource "aws_route53_record" "primary_amazonses_mx_record" {
