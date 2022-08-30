@@ -186,7 +186,7 @@ resource "fastly_service_vcl" "files" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/files-pythonhosted-org-errors/%Y/%m/%d/%H/%M/"
+    path          = "/${replace(var.domain, ".", "-")}-errors/%Y/%m/%d/%H/%M/"
   }
 
 
