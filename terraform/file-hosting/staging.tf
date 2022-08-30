@@ -149,7 +149,7 @@ resource "fastly_service_vcl" "files_staging" {
 
   vcl {
     name    = "PyPI Files Custom Varnish Configuration"
-    content = file("${path.module}/vcl/staging.vcl")
+    content = file("${path.module}/vcl/files.vcl")
     main    = true
   }
 
