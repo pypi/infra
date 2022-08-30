@@ -47,26 +47,6 @@ resource "fastly_service_vcl" "files_staging" {
   }
 
   backend {
-    name              = "S3"
-    auto_loadbalance  = false
-    request_condition = "NeverReq"
-    shield            = "bfi-wa-us"
-
-    healthcheck = "S3 Health"
-
-    address           = "${var.files_bucket}.s3.amazonaws.com"
-    port              = 443
-    use_ssl           = true
-    ssl_cert_hostname = "${var.files_bucket}.s3.amazonaws.com"
-    ssl_sni_hostname  = "${var.files_bucket}.s3.amazonaws.com"
-
-    connect_timeout       = 5000
-    first_byte_timeout    = 60000
-    between_bytes_timeout = 15000
-    error_threshold       = 5
-  }
-
-  backend {
     name             = "GCS"
     auto_loadbalance = false
     shield           = "bfi-wa-us"
@@ -79,6 +59,26 @@ resource "fastly_service_vcl" "files_staging" {
     use_ssl           = true
     ssl_cert_hostname = "${var.files_bucket}.storage.googleapis.com"
     ssl_sni_hostname  = "${var.files_bucket}.storage.googleapis.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
+    name              = "S3"
+    auto_loadbalance  = false
+    request_condition = "NeverReq"
+    shield            = "bfi-wa-us"
+
+    healthcheck = "S3 Health"
+
+    address           = "${var.files_bucket}.s3.amazonaws.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.files_bucket}.s3.amazonaws.com"
+    ssl_sni_hostname  = "${var.files_bucket}.s3.amazonaws.com"
 
     connect_timeout       = 5000
     first_byte_timeout    = 60000
@@ -105,9 +105,9 @@ resource "fastly_service_vcl" "files_staging" {
   }
 
   healthcheck {
-    name = "S3 Health"
+    name = "GCS Health"
 
-    host   = "${var.files_bucket}.s3.amazonaws.com"
+    host   = "${var.files_bucket}.storage.googleapis.com"
     method = "GET"
     path   = "/_health.txt"
 
@@ -119,9 +119,9 @@ resource "fastly_service_vcl" "files_staging" {
   }
 
   healthcheck {
-    name = "GCS Health"
+    name = "S3 Health"
 
-    host   = "${var.files_bucket}.storage.googleapis.com"
+    host   = "${var.files_bucket}.s3.amazonaws.com"
     method = "GET"
     path   = "/_health.txt"
 
