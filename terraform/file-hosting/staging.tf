@@ -146,8 +146,9 @@ resource "fastly_service_vcl" "files_staging" {
     window         = 4
   }
 
+
   vcl {
-    name    = "Staging"
+    name    = "PyPI Files Custom Varnish Configuration"
     content = file("${path.module}/vcl/staging.vcl")
     main    = true
   }

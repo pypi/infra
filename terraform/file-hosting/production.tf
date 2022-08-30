@@ -148,7 +148,7 @@ resource "fastly_service_vcl" "files" {
 
 
   vcl {
-    name    = "Main"
+    name    = "PyPI Files Custom Varnish Configuration"
     content = file("${path.module}/vcl/main.vcl")
     main    = true
   }
