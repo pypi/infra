@@ -1,10 +1,10 @@
-resource "fastly_service_vcl" "files_staging" {
-  name     = "PyPI Staging File Hosting"
+resource "fastly_service_vcl" "files" {
+  name     = var.fastly_service_name
   # Set to false for spicy changes
   activate = true
 
   domain {
-    name = var.staging_domain
+    name = var.domain
   }
 
   snippet {
@@ -148,10 +148,47 @@ resource "fastly_service_vcl" "files_staging" {
 
 
   vcl {
-    name    = "PyPI Files Custom Varnish Configuration"
+    name    = "Main"
     content = file("${path.module}/vcl/files.vcl")
     main    = true
   }
+
+  logging_gcs {
+    name             = "Linehaul GCS"
+    bucket_name      = var.linehaul_gcs["bucket"]
+    path             = "downloads/%Y/%m/%d/%H/%M/"
+    message_type     = "blank"
+    format           = "download|%%{now}V|%%{client.geo.country_code}V|%%{req.url.path}V|%%{tls.client.protocol}V|%%{tls.client.cipher}V|%%{resp.http.x-amz-meta-project}V|%%{resp.http.x-amz-meta-version}V|%%{resp.http.x-amz-meta-package-type}V|%%{req.http.user-agent}V"
+    timestamp_format = "%Y-%m-%dT%H:%M:%S.000"
+    gzip_level       = 9
+    period           = 120
+
+    user       = var.linehaul_gcs["email"]
+    secret_key = var.linehaul_gcs["private_key"]
+
+    # We actually never want this to log by default, we'll manually log to it in
+    # our VCL, but we need to set it here so that the system is configured to
+    # have it as a logger.
+    response_condition = "Never"
+  }
+
+  logging_s3 {
+    name = "S3 Error Logs"
+
+    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{req.url}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %D \"%%{fastly_info.state}V\""
+    format_version = 2
+    gzip_level     = 9
+
+    period             = 60
+    response_condition = "5xx Error"
+
+    s3_access_key = var.s3_logging_keys["access_key"]
+    s3_secret_key = var.s3_logging_keys["secret_key"]
+    domain        = "s3-eu-west-1.amazonaws.com"
+    bucket_name   = "psf-fastly-logs-eu-west-1"
+    path          = "/files-pythonhosted-org-errors/%Y/%m/%d/%H/%M/"
+  }
+
 
   condition {
     name      = "Package File"
@@ -186,11 +223,21 @@ resource "fastly_service_vcl" "files_staging" {
   }
 }
 
-
-resource "aws_route53_record" "files-staging" {
+resource "aws_route53_record" "files" {
   zone_id = var.zone_id
-  name    = var.staging_domain
+  name    = var.domain
   type    = local.apex_domain ? "A" : "CNAME"
   ttl     = 86400
-  records = var.fastly_endpoints[join("_", [var.domain_map[var.staging_domain], local.apex_domain ? "A" : "CNAME"])]
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.domain], local.apex_domain ? "A" : "CNAME"])]
+}
+
+
+resource "aws_route53_record" "files-ipv6" {
+  count = local.apex_domain ? 1 : 0
+
+  zone_id = var.zone_id
+  name    = var.domain
+  type    = "AAAA"
+  ttl     = 86400
+  records = var.fastly_endpoints[join("_", [var.domain_map[var.domain], "AAAA"])]
 }

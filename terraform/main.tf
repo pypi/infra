@@ -116,13 +116,13 @@ module "pypi" {
 module "file-hosting" {
   source = "./file-hosting"
 
-  zone_id          = module.dns.user_content_zone_id
-  domain           = "files.pythonhosted.org"
-  staging_domain   = "files-staging.pythonhosted.org"
-  conveyor_address = "conveyor.cmh1.psfhosted.org"
-  files_bucket     = "pypi-files"
-  mirror           = "mirror.dub1.pypi.io"
-  s3_logging_keys  = var.fastly_s3_logging
+  zone_id             = module.dns.user_content_zone_id
+  domain              = "files.pythonhosted.org"
+  fastly_service_name = "PyPI File Hosting"
+  conveyor_address    = "conveyor.cmh1.psfhosted.org"
+  files_bucket        = "pypi-files"
+  mirror              = "mirror.dub1.pypi.io"
+  s3_logging_keys     = var.fastly_s3_logging
 
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key

@@ -1,6 +1,6 @@
 variable "zone_id" { type = string }
 variable "domain" { type = string }
-variable "staging_domain" { type = string }
+variable "fastly_service_name" { type = string }
 variable "conveyor_address" { type = string }
 variable "files_bucket" { type = string }
 variable "mirror" { type = string }
@@ -13,7 +13,6 @@ variable "gcs_secret_access_key" { type = string }
 
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
-
 
 locals {
   apex_domain = length(split(".", var.domain)) > 2 ? false : true
