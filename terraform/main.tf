@@ -39,7 +39,6 @@ module "dns" {
   caa_issuers = [
     "amazon.com",
     "globalsign.com",
-    "Digicert.com",
   ]
 
   apex_txt = [
