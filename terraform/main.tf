@@ -22,7 +22,7 @@ locals {
     "pypi.org"                       = "python.map.fastly.net"
     "pythonhosted.org"               = "r.ssl.fastly.net"
     "files.pythonhosted.org"         = "r.ssl.fastly.net"
-    "files-staging.pythonhosted.org" = "r.ssl.fastly.net"
+    "test-files.pythonhosted.org"    = "r.ssl.fastly.net"
   }
 }
 
@@ -115,13 +115,13 @@ module "pypi" {
 module "file-hosting" {
   source = "./file-hosting"
 
-  zone_id          = module.dns.user_content_zone_id
-  domain           = "files.pythonhosted.org"
-  staging_domain   = "files-staging.pythonhosted.org"
-  conveyor_address = "conveyor.cmh1.psfhosted.org"
-  files_bucket     = "pypi-files"
-  mirror           = "mirror.dub1.pypi.io"
-  s3_logging_keys  = var.fastly_s3_logging
+  zone_id             = module.dns.user_content_zone_id
+  domain              = "files.pythonhosted.org"
+  fastly_service_name = "PyPI File Hosting"
+  conveyor_address    = "conveyor.cmh1.psfhosted.org"
+  files_bucket        = "pypi-files"
+  mirror              = "mirror.dub1.pypi.io"
+  s3_logging_keys     = var.fastly_s3_logging
 
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
@@ -130,6 +130,33 @@ module "file-hosting" {
 
   linehaul_gcs = {
     bucket      = "linehaul-logs"
+    email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
+    private_key = "${var.linehaul_gcs_private_key}"
+  }
+
+  fastly_endpoints = local.fastly_endpoints
+  domain_map       = local.domain_map
+}
+
+
+module "test-file-hosting" {
+  source = "./file-hosting"
+
+  zone_id             = module.dns.user_content_zone_id
+  domain              = "test-files.pythonhosted.org"
+  fastly_service_name = "Test PyPI File Hosting"
+  conveyor_address    = "conveyor-test.ingress.cmh1.psfhosted.org"
+  files_bucket        = "pypi-files-staging"
+  mirror              = "test-mirror.dub1.pypi.io"
+  s3_logging_keys     = var.fastly_s3_logging
+
+  aws_access_key_id     = var.aws_access_key_id
+  aws_secret_access_key = var.aws_secret_access_key
+  gcs_access_key_id     = var.gcs_access_key_id
+  gcs_secret_access_key = var.gcs_secret_access_key
+
+  linehaul_gcs = {
+    bucket      = "linehaul-logs-staging"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
   }
