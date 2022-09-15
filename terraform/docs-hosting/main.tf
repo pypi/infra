@@ -1,4 +1,4 @@
-variable "sitename" { default = "PyPI" }
+variable "sitename" { type = string }
 variable "zone_id" { type = string }
 variable "domain" { type = string }
 variable "conveyor_address" { type = string }
