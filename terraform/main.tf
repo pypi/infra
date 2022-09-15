@@ -21,6 +21,7 @@ locals {
   domain_map = {
     "pypi.org"                       = "python.map.fastly.net"
     "pythonhosted.org"               = "r.ssl.fastly.net"
+    "test.pythonhosted.org"          = "r.ssl.fastly.net"
     "files.pythonhosted.org"         = "r.ssl.fastly.net"
     "test-files.pythonhosted.org"    = "r.ssl.fastly.net"
   }
@@ -169,9 +170,22 @@ module "test-file-hosting" {
 module "docs-hosting" {
   source = "./docs-hosting"
 
+  sitename         = "PyPI"
   zone_id          = module.dns.user_content_zone_id
   domain           = "pythonhosted.org"
   conveyor_address = "conveyor.cmh1.psfhosted.org"
+
+  fastly_endpoints = local.fastly_endpoints
+  domain_map       = local.domain_map
+}
+
+module "test-docs-hosting" {
+  source = "./docs-hosting"
+
+  sitename         = "Test PyPI"
+  zone_id          = module.dns.user_content_zone_id
+  domain           = "test.pythonhosted.org"
+  conveyor_address = "conveyor-test.cmh1.psfhosted.org"
 
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
