@@ -115,10 +115,6 @@ module "test-pypi" {
   name    = "Test PyPI"
   zone_id = module.dns.primary_zone_id
   domain  = "test.pypi.org"
-  # Because of limitations of the Terraform fastly provider, there must be the same
-  # number of entries in any extra_domains across instances of this module, and
-  # changing the number of elements in the list requires modifying the module to
-  # handle the new number of elements.
   extra_domains   = ["testpypi.python.org", "test.pypi.io", "warehouse-staging.python.org"]
   backend         = "warehouse-test.ingress.cmh1.psfhosted.org"
   mirror          = "test-mirror.dub1.pypi.io"
