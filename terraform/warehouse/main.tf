@@ -25,11 +25,13 @@ resource "fastly_service_vcl" "pypi" {
   domain { name = var.domain }
 
   # Extra Domains
-  domain { name = var.extra_domains[0] }
-  domain { name = var.extra_domains[1] }
-  domain { name = var.extra_domains[2] }
-  domain { name = var.extra_domains[3] }
-  domain { name = var.extra_domains[4] }
+
+  dynamic "domain" {
+    for_each = var.extra_domains
+    content {
+      name = domain.value
+ }
+}
 
   snippet {
     content  = "set req.http.Warehouse-Token = \"${var.warehouse_token}\";"

@@ -88,13 +88,9 @@ module "testpypi-email" {
 module "pypi" {
   source = "./warehouse"
 
-  name    = "PyPI"
-  zone_id = module.dns.primary_zone_id
-  domain  = "pypi.org"
-  # Because of limitations of the Terraform fastly provider, there must be the same
-  # number of entries in any extra_domains across instances of this module, and
-  # changing the number of elements in the list requires modifying the module to
-  # handle the new number of elements.
+  name            = "PyPI"
+  zone_id         = module.dns.primary_zone_id
+  domain          = "pypi.org"
   extra_domains   = ["www.pypi.org", "pypi.python.org", "pypi.io", "www.pypi.io", "warehouse.python.org"]
   backend         = "warehouse.cmh1.psfhosted.org"
   mirror          = "mirror.dub1.pypi.io"
@@ -112,6 +108,32 @@ module "pypi" {
   domain_map       = local.domain_map
 }
 
+module "test-pypi" {
+  source = "./warehouse"
+
+  name    = "Test PyPI"
+  zone_id = module.dns.primary_zone_id
+  domain  = "test.pypi.org"
+  # Because of limitations of the Terraform fastly provider, there must be the same
+  # number of entries in any extra_domains across instances of this module, and
+  # changing the number of elements in the list requires modifying the module to
+  # handle the new number of elements.
+  extra_domains   = ["testpypi.python.org", "test.pypi.io", "warehouse-staging.python.org"]
+  backend         = "warehouse-test.ingress.cmh1.psfhosted.org"
+  mirror          = "test-mirror.dub1.pypi.io"
+  s3_logging_keys = var.fastly_s3_logging
+  
+  warehouse_token = var.test_pypi_warehouse_token
+
+  linehaul_gcs = {
+    bucket      = "linehaul-logs-staging"
+    email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
+    private_key = "${var.linehaul_gcs_private_key}"
+  }
+
+  fastly_endpoints = local.fastly_endpoints
+  domain_map       = local.domain_map
+}
 
 module "file-hosting" {
   source = "./file-hosting"
