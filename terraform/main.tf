@@ -20,6 +20,7 @@ locals {
   }
   domain_map = {
     "pypi.org"                       = "python.map.fastly.net"
+    "test.pypi.org"                  = "r.ssl.fastly.net"
     "pythonhosted.org"               = "r.ssl.fastly.net"
     "test.pythonhosted.org"          = "r.ssl.fastly.net"
     "files.pythonhosted.org"         = "r.ssl.fastly.net"
