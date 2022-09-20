@@ -30,7 +30,7 @@ resource "fastly_service_vcl" "pypi" {
     for_each = var.extra_domains
     content {
       name = domain.value
-  }
+    }
   }
 
   snippet {
