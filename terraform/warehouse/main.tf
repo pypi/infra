@@ -135,7 +135,7 @@ resource "fastly_service_vcl" "pypi" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/pypi-org/%Y/%m/%d/"
+    path          = "/${replace(var.domain, ".", "-")}/%Y/%m/%d/"
   }
 
   logging_s3 {
@@ -152,7 +152,7 @@ resource "fastly_service_vcl" "pypi" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
+    path          = "/${replace(var.domain, ".", "-")}-errors/%Y/%m/%d/%H/%M/"
   }
 
   logging_gcs {

@@ -92,7 +92,8 @@ module "pypi" {
   name            = "PyPI"
   zone_id         = module.dns.primary_zone_id
   domain          = "pypi.org"
-  extra_domains   = ["www.pypi.org", "pypi.python.org", "pypi.io", "www.pypi.io", "warehouse.python.org"]
+# Note:  the first domain gets this XMLRPC exception/bypass
+  extra_domains   = ["pypi.python.org", "www.pypi.org", "pypi.io", "www.pypi.io", "warehouse.python.org"]
   backend         = "warehouse.cmh1.psfhosted.org"
   mirror          = "mirror.dub1.pypi.io"
   s3_logging_keys = var.fastly_s3_logging
