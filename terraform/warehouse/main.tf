@@ -18,7 +18,7 @@ locals {
 
 
 resource "fastly_service_vcl" "pypi" {
-  name     = "PyPI"
+  name     = var.name
   # Set to false for spicy changes
   activate = true
 
