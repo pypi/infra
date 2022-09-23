@@ -18,18 +18,20 @@ locals {
 
 
 resource "fastly_service_vcl" "pypi" {
-  name     = "PyPI"
+  name     = var.name
   # Set to false for spicy changes
-  activate = true
+  activate = false
 
   domain { name = var.domain }
 
   # Extra Domains
-  domain { name = var.extra_domains[0] }
-  domain { name = var.extra_domains[1] }
-  domain { name = var.extra_domains[2] }
-  domain { name = var.extra_domains[3] }
-  domain { name = var.extra_domains[4] }
+
+  dynamic "domain" {
+    for_each = var.extra_domains
+    content {
+      name = domain.value
+    }
+  }
 
   snippet {
     content  = "set req.http.Warehouse-Token = \"${var.warehouse_token}\";"
@@ -118,7 +120,14 @@ resource "fastly_service_vcl" "pypi" {
 
   vcl {
     name    = "Main"
-    content = templatefile("${path.module}/vcl/main.vcl", { pretty_503 = file("${path.module}/html/error.html") })
+    content = templatefile(
+        "${path.module}/vcl/main.vcl",
+        {
+            pretty_503 = file("${path.module}/html/error.html")
+            domain = var.domain
+            extra_domains = var.extra_domains
+        }
+    )
     main    = true
   }
 
@@ -133,7 +142,7 @@ resource "fastly_service_vcl" "pypi" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/pypi-org/%Y/%m/%d/"
+    path          = "/${replace(var.domain, ".", "-")}/%Y/%m/%d/"
   }
 
   logging_s3 {
@@ -150,7 +159,7 @@ resource "fastly_service_vcl" "pypi" {
     s3_secret_key = var.s3_logging_keys["secret_key"]
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/pypi-org-errors/%Y/%m/%d/%H/%M/"
+    path          = "/${replace(var.domain, ".", "-")}-errors/%Y/%m/%d/%H/%M/"
   }
 
   logging_gcs {
