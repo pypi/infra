@@ -1,6 +1,7 @@
 variable "name" { type = string }
 variable "zone_id" { type = string }
 variable "domain" { type = string }
+# Note:  the first domain in "extra_domains" gets an XMLRPC exception/bypass in VCL
 variable "extra_domains" { type = list(any) }
 variable "backend" { type = string }
 variable "mirror" { type = string }
