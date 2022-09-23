@@ -211,7 +211,7 @@ sub vcl_recv {
     # this includes the temporary domain names that Warehouse had, as well as the
     # existing legacy domain name. This is purposely being done *after* the HTTPS
     # checks so that we can force clients to utilize HTTPS.
-    if (std.tolower(req.http.host) ~ "^(join("|", "$${extra_domains}")$") {
+    if (std.tolower(req.http.host) ~ "^(${join("|", extra_domains)})$") {
         # For HTTP GET/HEAD requests, we'll simply issue a 301 redirect, because that
         # has the widest support and is a permanent redirect. However, it has the
         # disadvantage of changing a POST to a GET, so for POST, etc we will attempt
@@ -219,20 +219,20 @@ sub vcl_recv {
         # and older may tools may not support them, so we may need to revist this.
         if (req.request == "GET" || req.request == "HEAD") {
             # Handle our GET/HEAD requests with a 301 redirect.
-            set req.http.Location = "https://$${domain}" req.url;
+            set req.http.Location = "https://${domain}" req.url;
             error 650 "Redirect to Primary Domain";
         } else if (req.request == "POST" &&
-                   std.tolower(req.http.host) == "$${extra_domains[0]}" &&
+                   std.tolower(req.http.host) == "${extra_domains[0]}" &&
                    (req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
                    req.http.Content-Type ~ "text/xml") {
             # The one exception to this, is XML-RPC requests to pypi.python.org, which
             # we want to silently rewrite to continue to function as if it was hitting
             # the new Warehouse endpoints. All we really need to do here is to fix
             # the Host header, and everything else will just continue to work.
-            set req.http.Host = "$${domain}";
+            set req.http.Host = "${domain}";
         } else {
             # Finally, handle our other methods with a 308 redirect.
-            set req.http.Location = "https://$${domain}" req.url;
+            set req.http.Location = "https://${domain}" req.url;
             error 651 "Redirect to Primary Domain";
         }
     }

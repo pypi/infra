@@ -120,7 +120,14 @@ resource "fastly_service_vcl" "pypi" {
 
   vcl {
     name    = "Main"
-    content = templatefile("${path.module}/vcl/main.vcl", { pretty_503 = file("${path.module}/html/error.html") })
+    content = templatefile(
+        "${path.module}/vcl/main.vcl",
+        {
+            pretty_503 = file("${path.module}/html/error.html")
+            domain = var.domain
+            extra_domains = var.extra_domains
+        }
+    )
     main    = true
   }
 
