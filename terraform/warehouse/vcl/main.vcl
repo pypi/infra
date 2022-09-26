@@ -2,11 +2,9 @@ sub vcl_recv {
     # Require authentication for curl -XPURGE requests.
     set req.http.Fastly-Purge-Requires-Auth = "1";
 
-    # I'm not 100% sure on what this is exactly for, it was taken from the
-    # Fastly documentation, however, what I *believe* it does is just ensure
-    # that we don't serve a stale copy of the page from the shield node when
-    # an edge node is requesting content.
-    if (req.http.Fastly-FF) {
+    # Prevent edge from caching stale content served from shield
+    # https://developer.fastly.com/learning/concepts/stale/#shielding-considerations
+    if (fastly.ff.visits_this_service > 0) {
         set req.max_stale_while_revalidate = 0s;
     }
 
