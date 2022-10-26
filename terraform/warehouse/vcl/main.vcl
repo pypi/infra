@@ -136,20 +136,24 @@ sub vcl_recv {
     # thing, reducing cache misses due to ordering differences.
     set req.url = boltsort.sort(req.url);
 
-    # Strip Accept-Language headers from request, the backends currently attempt
-    # to respect this, but we're not setup for it yet... in VCL or otherwise.
-    # This leads to us caching translated content in the default locale (en).
-    unset req.http.Accept-Language;
-
     # Synthesize a custom header for the locale if set, so we can vary on this
     # instead of the entire cookie, only do this on the edge. Shields should
     # ignore cookies.
     if (!req.http.Fastly-FF) {
-        # Default to english for cached content
-        set req.http.PyPI-Locale = "en";
-
         if (req.http.Cookie:_LOCALE_ && req.http.Cookie:_LOCALE_ != "") {
+            # If set, language from cookie always wins
             set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
+        } else {
+            # Lookup in Accept-Language header, fallback to "en" if no match found in supported languages
+            # This list should mirror the KNOWN_LOCALES identifier list in https://github.com/pypi/warehouse/blob/main/warehouse/i18n/__init__.py
+            # Note that the format for tags may be different than those in KNOWN_LOCALES
+            # reference https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry for correct values.
+            set req.http.PyPI-Locale = accept.language_lookup("en:es:fr:ja:pt-BR:uk:el:de:zh-Hans:zh-Hant:ru:he:eo", "en", req.http.Accept-Language);
+
+            if (!req.http.PyPI-Locale) {
+                # Safety-check: If PyPI-Locale is empty, default to "en"
+                set req.http.PyPI-Locale = "en";
+            }
         }
     }
 
