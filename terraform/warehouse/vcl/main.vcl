@@ -145,7 +145,11 @@ sub vcl_recv {
             set req.http.PyPI-Locale = req.http.Cookie:_LOCALE_;
         } else {
             # Lookup in Accept-Language header, fallback to "en" if no match found in supported languages
-            set req.http.PyPI-Locale = accept.language_lookup("en:es:fr:ja:pt-BR:uk:el:de", "en", req.http.Accept-Language);
+            # This list should mirror the KNOWN_LOCALES identifier list in https://github.com/pypi/warehouse/blob/main/warehouse/i18n/__init__.py
+            # Note that the format for tags may be different than those in KNOWN_LOCALES
+            # reference https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry for correct values.
+            set req.http.PyPI-Locale = accept.language_lookup("en:es:fr:ja:pt-BR:uk:el:de:zh-Hans:zh-Hant:ru:he:eo", "en", req.http.Accept-Language);
+
             if (!req.http.PyPI-Locale) {
                 # Safety-check: If PyPI-Locale is empty, default to "en"
                 set req.http.PyPI-Locale = "en";
