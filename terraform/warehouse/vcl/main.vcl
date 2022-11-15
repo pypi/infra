@@ -492,7 +492,7 @@ sub vcl_error {
     } else if (obj.status == 667) {
         set obj.status = 200;
         set obj.http.Content-Type = "text/xml; charset=UTF-8";
-        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI's XMLRPC API is currently disabled due to unmanageable load and will be deprecated in the near future. See https://status.python.org/ for more information.</string></value></member></struct></value></fault></methodResponse>";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports 'pip search' (or XML-RPC search). Please use https://${domain}/search (via a browser) instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
         return (deliver);
     } else if (obj.status == 668) {
         set obj.status = 406;
