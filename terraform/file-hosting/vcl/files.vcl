@@ -1,4 +1,12 @@
 sub vcl_recv {
+    # Require authentication for curl -XPURGE requests, required for Segmented Caching
+    set req.http.Fastly-Purge-Requires-Auth = "1";
+
+    # Enable Segmented Caching for package URLS
+    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        set req.enable_segmented_caching = true;
+    }
+
     declare local var.AWS-Access-Key-ID STRING;
     declare local var.AWS-Secret-Access-Key STRING;
     declare local var.S3-Bucket-Name STRING;
@@ -233,7 +241,9 @@ sub vcl_deliver {
         set resp.http.Access-Control-Allow-Origin = "*";
 
         # And we want to log an event stating that a download has taken place.
-        log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
+        if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
+            log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
+        }
     }
 
     # Unset a few headers set by Amazon/Google that we don't really have a need/desire
