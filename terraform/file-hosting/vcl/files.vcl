@@ -241,7 +241,9 @@ sub vcl_deliver {
         set resp.http.Access-Control-Allow-Origin = "*";
 
         # And we want to log an event stating that a download has taken place.
-        log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
+        if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
+            log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
+        }
     }
 
     # Unset a few headers set by Amazon/Google that we don't really have a need/desire
