@@ -1,4 +1,12 @@
 sub vcl_recv {
+    # Require authentication for curl -XPURGE requests, required for Segmented Caching
+    set req.http.Fastly-Purge-Requires-Auth = "1";
+
+    # Enable Segmented Caching for package URLS
+    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        set req.enable_segmented_caching = true;
+    }
+
     declare local var.AWS-Access-Key-ID STRING;
     declare local var.AWS-Secret-Access-Key STRING;
     declare local var.S3-Bucket-Name STRING;
