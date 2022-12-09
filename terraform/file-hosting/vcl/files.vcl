@@ -239,11 +239,6 @@ sub vcl_deliver {
         set resp.http.Access-Control-Allow-Methods = "GET, OPTIONS";
         set resp.http.Access-Control-Allow-Headers= "Range";
         set resp.http.Access-Control-Allow-Origin = "*";
-
-        # And we want to log an event stating that a download has taken place.
-        if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
-            log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
-        }
     }
 
     # Unset a few headers set by Amazon/Google that we don't really have a need/desire
@@ -292,4 +287,24 @@ sub vcl_error {
         return (deliver);
     }
 
+}
+
+
+sub vcl_log {
+#FASTLY log
+
+    # If we're not executing a shielding request, and the URL is one of our file
+    # URLs, and it's a GET request, and the response is either a 200 or a 206
+    # then...
+    if (!req.http.Fastly-FF
+            && req.url.path ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/"
+            && (req.request == "GET" || req.request == "OPTIONS")
+            && http_status_matches(resp.status, "200,206")) {
+
+        # We want to log an event stating that a download has taken place.
+        if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
+            log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
+        }
+
+    }
 }
