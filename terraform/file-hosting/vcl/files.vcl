@@ -241,9 +241,15 @@ sub vcl_deliver {
         set resp.http.Access-Control-Allow-Origin = "*";
     }
 
-    # Unset a few headers set by Amazon/Google that we don't really have a need/desire
-    # to send to clients.
+    # Rename or unset a few headers to send to clients.
     if (!req.http.Fastly-FF) {
+        # Rename PyPI specific headers for file metadata, used by linehaul
+        set resp.http.x-pypi-file-python-version = resp.http.x-amz-meta-python-version;
+        set resp.http.x-pypi-file-version = resp.http.x-amz-meta-version;
+        set resp.http.x-pypi-file-package-type = resp.http.x-amz-meta-package-type;
+        set resp.http.x-pypi-file-project = resp.http.x-amz-meta-project;
+
+        # Unset Amazon/Google headers that shouldn't be exposed to clients
         unset resp.http.x-amz-replication-status;
         unset resp.http.x-amz-meta-python-version;
         unset resp.http.x-amz-meta-version;
@@ -303,7 +309,7 @@ sub vcl_log {
 
         # We want to log an event stating that a download has taken place.
         if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
-            log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-amz-meta-project "|" resp.http.x-amz-meta-version "|" resp.http.x-amz-meta-package-type "|" req.http.user-agent;
+            log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-pypi-file-project "|" resp.http.x-pypi-file-version "|" resp.http.x-pypi-file-package-type "|" req.http.user-agent;
         }
 
     }
