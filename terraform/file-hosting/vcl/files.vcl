@@ -152,7 +152,7 @@ sub vcl_fetch {
 
     # When we're fetching our files, we want to give them a super long Cache-Control
     # header. We can't add these by default in S3, but we can add them here.
-    if (beresp.status == 200 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+    if (http_status_matches(beresp.status, "200,206") && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
         # Google sets an Expires header for private requests, we should drop this.
         unset beresp.http.expires;
         set beresp.http.Cache-Control = "max-age=365000000, immutable, public";
