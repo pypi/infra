@@ -1,7 +1,7 @@
 resource "fastly_service_vcl" "files" {
   name     = var.fastly_service_name
   # Set to false for spicy changes
-  activate = false
+  activate = true
 
   domain {
     name = var.domain
