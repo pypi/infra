@@ -56,8 +56,8 @@ sub vcl_recv {
         error 603 "SSL is required";
     }
 
-    # Forbid clients without SNI support (Note this is disabled at Fastly's level, but provide a fallback).
-    if (!req.http.Fastly-FF && tls.client.servername == "") {
+    # Forbid clients without SNI support, except Fastly/cache-check (Note this is disabled at edge, but provide a fallback).
+    if (!req.http.Fastly-FF && tls.client.servername == "" && req.http.User-Agent != "Fastly/cache-check") {
         error 604 "SNI is required";
     }
 
