@@ -116,6 +116,11 @@ sub vcl_fetch {
         set beresp.cacheable = true;
     }
 
+    # Enable Streaming miss for package URLS
+    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        set beresp.do_stream = true;
+    }
+
     # If we successfully got a 404 response from GCS for a Package URL restart
     # to check S3 for the file!
     if (req.restarts == 0 && req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/" && http_status_matches(beresp.status, "404")) {
