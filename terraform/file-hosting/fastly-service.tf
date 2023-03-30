@@ -32,7 +32,7 @@ resource "fastly_service_vcl" "files" {
   snippet {
     name     = "Linehaul"
     priority = 100
-    type     = "recv"
+    type     = "log"
     content  = "set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};"
   }
 

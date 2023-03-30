@@ -297,6 +297,8 @@ sub vcl_error {
 
 
 sub vcl_log {
+    declare local var.Ship-Logs-To-Line-Haul BOOL;
+
 #FASTLY log
 
     # If we're not executing a shielding request, and the URL is one of our file

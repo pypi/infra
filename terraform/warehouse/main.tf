@@ -44,8 +44,11 @@ resource "fastly_service_vcl" "pypi" {
   snippet {
     name     = "Linehaul"
     priority = 100
-    type     = "recv"
-    content  = "set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};"
+    type     = "log"
+    content  = <<-EOT
+        declare local var.Ship-Logs-To-Line-Haul BOOL;
+        set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};
+    EOT
   }
 
   backend {
