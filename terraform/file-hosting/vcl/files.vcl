@@ -308,8 +308,10 @@ sub vcl_log {
             && http_status_matches(resp.status, "200,206")) {
 
         # We want to log an event stating that a download has taken place.
-        if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
-            log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-pypi-file-project "|" resp.http.x-pypi-file-version "|" resp.http.x-pypi-file-package-type "|" req.http.user-agent;
+        if (var.Ship-Logs-To-Line-Haul) {  # Only log for linehaul if enabled
+            if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
+                log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-pypi-file-project "|" resp.http.x-pypi-file-version "|" resp.http.x-pypi-file-package-type "|" req.http.user-agent;
+            }
         }
 
     }

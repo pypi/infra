@@ -101,6 +101,7 @@ module "pypi" {
 
   warehouse_token = var.warehouse_token
 
+  linehaul_enabled = true
   linehaul_gcs = {
     bucket      = "linehaul-logs"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
@@ -125,7 +126,8 @@ module "test-pypi" {
   
   warehouse_token = var.test_pypi_warehouse_token
 
-  linehaul_gcs = {
+  linehaul_enabled = false
+  linehaul_gcs     = {
     bucket      = "linehaul-logs-staging"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
@@ -151,7 +153,8 @@ module "file-hosting" {
   gcs_access_key_id     = var.gcs_access_key_id
   gcs_secret_access_key = var.gcs_secret_access_key
 
-  linehaul_gcs = {
+  linehaul_enabled = true
+  linehaul_gcs     = {
     bucket      = "linehaul-logs"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
@@ -178,6 +181,7 @@ module "test-file-hosting" {
   gcs_access_key_id     = var.gcs_access_key_id
   gcs_secret_access_key = var.gcs_secret_access_key
 
+  linehaul_enabled      = false
   linehaul_gcs = {
     bucket      = "linehaul-logs-staging"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"

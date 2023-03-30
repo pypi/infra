@@ -4,6 +4,7 @@ variable "fastly_service_name" { type = string }
 variable "conveyor_address" { type = string }
 variable "files_bucket" { type = string }
 variable "mirror" { type = string }
+variable "linehaul_enabled" { type = bool }
 variable "linehaul_gcs" { type = map(any) }
 variable "s3_logging_keys" { type = map(any) }
 variable "aws_access_key_id" { type = string }

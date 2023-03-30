@@ -1,7 +1,7 @@
 resource "fastly_service_vcl" "files" {
   name     = var.fastly_service_name
   # Set to false for spicy changes
-  activate = true
+  activate = false
 
   domain {
     name = var.domain
@@ -27,6 +27,13 @@ resource "fastly_service_vcl" "files" {
         set var.AWS-Secret-Access-Key = "${var.aws_secret_access_key}";
         set var.S3-Bucket-Name = "${var.files_bucket}";
     EOT
+  }
+
+  snippet {
+    name     = "Linehaul"
+    priority = 100
+    type     = "recv"
+    content  = "set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};"
   }
 
   backend {
