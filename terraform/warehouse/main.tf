@@ -5,6 +5,7 @@ variable "extra_domains" { type = list(any) }
 variable "backend" { type = string }
 variable "mirror" { type = string }
 variable "s3_logging_keys" { type = map(any) }
+variable "linehaul_enabled" { type = bool }
 variable "linehaul_gcs" { type = map(any) }
 variable "warehouse_token" { type = string }
 
@@ -20,7 +21,7 @@ locals {
 resource "fastly_service_vcl" "pypi" {
   name     = var.name
   # Set to false for spicy changes
-  activate = true
+  activate = false
 
   domain { name = var.domain }
 
@@ -38,6 +39,13 @@ resource "fastly_service_vcl" "pypi" {
     name     = "Warehouse Token"
     priority = 100
     type     = "recv"
+  }
+
+  snippet {
+    name     = "Linehaul"
+    priority = 100
+    type     = "recv"
+    content  = "set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};"
   }
 
   backend {
@@ -217,7 +225,7 @@ resource "fastly_service_vcl" "pypi" {
   condition {
     name      = "Linehaul Log"
     type      = "RESPONSE"
-    statement = "!req.http.Fastly-FF && req.url.path ~ \"^/simple/.+/\" && req.request == \"GET\" && http_status_matches(resp.status, \"200,304\")"
+    statement = "var.Ship-Logs-To-Line-Haul && !req.http.Fastly-FF && req.url.path ~ \"^/simple/.+/\" && req.request == \"GET\" && http_status_matches(resp.status, \"200,304\")"
   }
 
   condition {
