@@ -271,6 +271,21 @@ sub vcl_recv {
         set var.hashed_ip = digest.hash_sha256(var.client_ip);
         # TODO: After backend is updated, replace or remove `req.http.Warehouse-IP` above
         set req.http.Warehouse-Hashed-IP = var.hashed_ip;
+
+        # Geolocate the client IP address. We want details like city, state, country, etc.
+        declare local var.geo STRING;
+        if (client.geo.country_code != "**") {
+            set var.geo = client.geo.country_name;
+            if (client.geo.region != "NO REGION" && client.geo.region != "?") {
+            set var.geo = var.geo + "-" + client.geo.region;
+            }
+            # add city if it's not the same as the region
+            if (client.geo.city != "NO CITY" && client.geo.city != "?"
+                && client.geo.city != client.geo.region) {
+            set var.geo = var.geo + "-" + client.geo.city;
+            }
+        }
+        set req.http.Warehouse-Geo = var.geo;
     }
     # Pass the real host value back to the backend.
     if (req.http.Host) {
