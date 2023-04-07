@@ -2,7 +2,7 @@ sub vcl_recv {
     # Require authentication for curl -XPURGE requests.
     set req.http.Fastly-Purge-Requires-Auth = "1";
 
-    declare local var.Warehouse-Ip-Salt;
+    declare local var.Warehouse-Ip-Salt STRING;
 
     # Prevent edge from caching stale content served from shield
     # https://developer.fastly.com/learning/concepts/stale/#shielding-considerations
