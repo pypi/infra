@@ -99,7 +99,8 @@ module "pypi" {
   mirror          = "mirror.dub1.pypi.io"
   s3_logging_keys = var.fastly_s3_logging
 
-  warehouse_token = var.warehouse_token
+  warehouse_token   = var.warehouse_token
+  warehouse_ip_salt = var.warehouse_ip_salt
 
   linehaul_enabled = true
   linehaul_gcs = {
@@ -124,7 +125,8 @@ module "test-pypi" {
   mirror          = "test-mirror.dub1.pypi.io"
   s3_logging_keys = var.fastly_s3_logging
   
-  warehouse_token = var.test_pypi_warehouse_token
+  warehouse_token   = var.test_pypi_warehouse_token
+  warehouse_ip_salt = var.warehouse_ip_salt
 
   linehaul_enabled = false
   linehaul_gcs     = {

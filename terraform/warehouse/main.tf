@@ -8,6 +8,7 @@ variable "s3_logging_keys" { type = map(any) }
 variable "linehaul_enabled" { type = bool }
 variable "linehaul_gcs" { type = map(any) }
 variable "warehouse_token" { type = string }
+variable "warehouse_ip_salt" { type = string }
 
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
@@ -37,6 +38,13 @@ resource "fastly_service_vcl" "pypi" {
   snippet {
     content  = "set req.http.Warehouse-Token = \"${var.warehouse_token}\";"
     name     = "Warehouse Token"
+    priority = 100
+    type     = "recv"
+  }
+
+  snippet {
+    content  = "set var.Warehouse-Ip-Salt = \"${var.warehouse_ip_salt}\";"
+    name     = "Warehouse IP Salt"
     priority = 100
     type     = "recv"
   }
