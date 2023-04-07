@@ -274,11 +274,15 @@ sub vcl_recv {
 
         # Geolocate the client IP address.
         # Set distinct headers for country, region, and city.
-        if (client.geo.country_code != "**") {
-            set req.http.Warehouse-Country = client.geo.country_name;
-            set req.http.Warehouse-Region = client.geo.region;
-            set req.http.Warehouse-City = client.geo.city;
-        }
+        # See https://developer.fastly.com/reference/vcl/variables/geolocation/
+        # Any placeholder values for reserved blocks are sent through
+        # and left to pypi/warehouse on how to process
+        set req.http.Warehouse-Continent = client.geo.continent_code;
+        set req.http.Warehouse-Country-Code = client.geo.country_code;
+        set req.http.Warehouse-Country-Code-3 = client.geo.country_code3;
+        set req.http.Warehouse-Country = client.geo.country_name;
+        set req.http.Warehouse-Region = client.geo.region;
+        set req.http.Warehouse-City = client.geo.city;
     }
     # Pass the real host value back to the backend.
     if (req.http.Host) {
