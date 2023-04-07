@@ -2,6 +2,8 @@ sub vcl_recv {
     # Require authentication for curl -XPURGE requests.
     set req.http.Fastly-Purge-Requires-Auth = "1";
 
+    declare local var.Warehouse-Ip-Salt;
+
     # Prevent edge from caching stale content served from shield
     # https://developer.fastly.com/learning/concepts/stale/#shielding-considerations
     if (fastly.ff.visits_this_service > 0) {
@@ -259,16 +261,17 @@ sub vcl_recv {
     # Pass the client IP address back to the backend.
     if (req.http.Fastly-Client-IP) {
         set req.http.Warehouse-IP = req.http.Fastly-Client-IP;
+
         # Salt & hash the Client IP address
-        declare local var.salt STRING;
         declare local var.client_ip STRING;
         declare local var.hashed_ip STRING;
-        # TODO: Can't use Config/Secret stores in VCL, should we inject from TF?
-        set var.salt = "halloumi";
+
         # Concatenate the client IP address and the salt
-        set var.client_ip = req.http.Fastly-Client-IP + var.salt;
+        set var.client_ip = req.http.Fastly-Client-IP + var.Warehouse-Ip-Salt;
+
         # Hash the concatenated string
         set var.hashed_ip = digest.hash_sha256(var.client_ip);
+
         # TODO: After backend is updated, replace or remove `req.http.Warehouse-IP` above
         set req.http.Warehouse-Hashed-IP = var.hashed_ip;
 
