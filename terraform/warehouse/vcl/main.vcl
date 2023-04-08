@@ -110,10 +110,11 @@ sub vcl_recv {
     #   * /account/register/
     #   * /account/reset-password/
     #   * /account/verify-email/
+    #   * /account/verify-organization-role/
     #   * /account/two-factor/
     #   * /account/webauthn-authenticate/
     #   * /pypi
-    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|two-factor|webauthn-authenticate|recovery-code)/|pypi)") {
+    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|pypi)") {
         set req.url = req.url.path;
     }
 
