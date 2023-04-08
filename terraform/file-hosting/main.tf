@@ -18,3 +18,8 @@ variable "domain_map" { type = map(any) }
 locals {
   apex_domain = length(split(".", var.domain)) > 2 ? false : true
 }
+
+resource "b2_bucket" "primary_storage_bucket_backblaze" {
+  bucket_name = "${var.files_bucket}"
+  bucket_type = "allPrivate"
+}
