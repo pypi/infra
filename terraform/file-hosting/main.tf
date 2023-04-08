@@ -15,6 +15,11 @@ variable "gcs_secret_access_key" { type = string }
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
 
+provider "aws" {
+  alias   = "us-west-2"
+  region  = "us-west-2"
+}
+
 locals {
   apex_domain = length(split(".", var.domain)) > 2 ? false : true
 }
@@ -28,5 +33,31 @@ resource "b2_bucket" "primary_storage_bucket_backblaze" {
   }
   file_lock_configuration {
     is_file_lock_enabled = true
+  }
+}
+
+resource "aws_s3_bucket" "archive_storage_glacier_bucket" {
+  provider            = aws.us-west-2
+  bucket              = "${var.files_bucket}-archive"
+  object_lock_enabled = true
+}
+
+resource "aws_s3_bucket_acl" "archive_storage_glacier_bucket-acl" {
+  provider            = aws.us-west-2
+  bucket = aws_s3_bucket.archive_storage_glacier_bucket.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "archive_storage_glacier_bucket-config" {
+  provider            = aws.us-west-2
+  bucket = aws_s3_bucket.archive_storage_glacier_bucket.id
+
+  rule {
+    id = "to-cold-storage"
+    transition {
+      days = 1
+      storage_class = "GLACIER_IR"
+    }
+    status = "Enabled"
   }
 }
