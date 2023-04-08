@@ -21,5 +21,12 @@ locals {
 
 resource "b2_bucket" "primary_storage_bucket_backblaze" {
   bucket_name = "${var.files_bucket}"
+  bucket_info = {}
   bucket_type = "allPrivate"
+  default_server_side_encryption {
+    mode = "none"
+  }
+  file_lock_configuration {
+    is_file_lock_enabled = true
+  }
 }
