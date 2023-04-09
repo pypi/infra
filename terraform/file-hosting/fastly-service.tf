@@ -30,6 +30,17 @@ resource "fastly_service_vcl" "files" {
   }
 
   snippet {
+    name     = "B2"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.B2-Access-Key-ID = "${b2_application_key.primary_storage_read_key_backblaze.application_key_id}";
+        set var.B2-Secret-Access-Key = "${b2_application_key.primary_storage_read_key_backblaze.application_key}";
+        set var.B2-Bucket-Name = "${var.files_bucket}";
+    EOT
+  }
+
+  snippet {
     name     = "Linehaul"
     priority = 100
     type     = "log"
