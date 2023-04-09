@@ -7,6 +7,16 @@ sub vcl_recv {
         set req.enable_segmented_caching = true;
     }
 
+    # Access keys for our primary B2 bucket
+    declare local var.B2-Application-Key-ID STRING;
+    declare local var.B2-Application-Key STRING;
+    declare local var.B2-Bucket-Name STRING;
+
+    # Access keys for our archival S3 bucket
+    declare local var.AWS-Archive-Access-Key-ID STRING;
+    declare local var.AWS-Archive-Secret-Access-Key STRING;
+    declare local var.S3-Archive-Bucket-Name STRING;
+
     declare local var.AWS-Access-Key-ID STRING;
     declare local var.AWS-Secret-Access-Key STRING;
     declare local var.S3-Bucket-Name STRING;
