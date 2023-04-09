@@ -93,7 +93,7 @@ data "aws_iam_policy_document" "archive_storage_access_policy_document" {
 }
 
 resource "aws_iam_user_policy" "archive_storage_access_policy" {
-  name   = "Read Access ${aws_s3_bucket.archive_storage_glacier_bucket.id}"
+  name   = "read-access-${aws_s3_bucket.archive_storage_glacier_bucket.id}"
   user   = aws_iam_user.archive_storage_access_user.name
   policy = data.aws_iam_policy_document.archive_storage_access_policy_document.json
 }
