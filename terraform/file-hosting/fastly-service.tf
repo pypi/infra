@@ -1,5 +1,5 @@
 resource "fastly_service_vcl" "files" {
-  name     = var.fastly_service_name
+  name = var.fastly_service_name
   # Set to false for spicy changes
   activate = false
 
@@ -26,6 +26,28 @@ resource "fastly_service_vcl" "files" {
         set var.AWS-Access-Key-ID = "${var.aws_access_key_id}";
         set var.AWS-Secret-Access-Key = "${var.aws_secret_access_key}";
         set var.S3-Bucket-Name = "${var.files_bucket}";
+    EOT
+  }
+
+  snippet {
+    name     = "B2"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.B2-Access-Key-ID = "${b2_application_key.primary_storage_read_key_backblaze.application_key_id}";
+        set var.B2-Secret-Access-Key = "${b2_application_key.primary_storage_read_key_backblaze.application_key}";
+        set var.B2-Bucket-Name = "${var.files_bucket}";
+    EOT
+  }
+
+  snippet {
+    name     = "AWS-Archive"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.AWS-Archive-Access-Key-ID = "${aws_iam_access_key.archive_storage_access_key.id}";
+        set var.AWS-Archive-Secret-Access-Key = "${aws_iam_access_key.archive_storage_access_key.secret}";
+        set var.S3-Archive-Bucket-Name = "${aws_s3_bucket.archive_storage_glacier_bucket.id}";
     EOT
   }
 
