@@ -41,6 +41,17 @@ resource "fastly_service_vcl" "files" {
   }
 
   snippet {
+    name     = "AWS-Archive"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.AWS-Archive-Access-Key-ID = "${aws_iam_access_key.archive_storage_access_key.id}";
+        set var.AWS-Archive-Secret-Access-Key = "${aws_iam_access_key.archive_storage_access_key.secret}";
+        set var.S3-Archive-Bucket-Name = "${aws_s3_bucket.archive_storage_glacier_bucket.id}";
+    EOT
+  }
+
+  snippet {
     name     = "Linehaul"
     priority = 100
     type     = "log"

@@ -24,6 +24,10 @@ locals {
   apex_domain = length(split(".", var.domain)) > 2 ? false : true
 }
 
+################################################################################
+# Our "primary" hot bucket in Backblaze
+################################################################################
+
 resource "b2_bucket" "primary_storage_bucket_backblaze" {
   bucket_name = "${var.files_bucket}"
   bucket_info = {}
@@ -41,6 +45,10 @@ resource "b2_application_key" "primary_storage_read_key_backblaze" {
   bucket_id = b2_bucket.primary_storage_bucket_backblaze.id
   capabilities = ["readFiles"]
 }
+
+################################################################################
+# Our "archival" failover bucket in AWS S3
+################################################################################
 
 resource "aws_s3_bucket" "archive_storage_glacier_bucket" {
   provider            = aws.us-west-2
@@ -66,4 +74,30 @@ resource "aws_s3_bucket_lifecycle_configuration" "archive_storage_glacier_bucket
     }
     status = "Enabled"
   }
+}
+
+resource "aws_iam_user" "archive_storage_access_user" {
+  name = "files-read-user-${var.files_bucket}-archive"
+  path = "/system/"
+}
+
+data "aws_iam_policy_document" "archive_storage_access_policy_document" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:GetObject", "s3:ListBucket"]
+    resources = [
+      "${aws_s3_bucket.archive_storage_glacier_bucket.arn}",
+      "${aws_s3_bucket.archive_storage_glacier_bucket.arn}/*"
+    ]
+  }
+}
+
+resource "aws_iam_user_policy" "archive_storage_access_policy" {
+  name   = "Read Access ${aws_s3_bucket.archive_storage_glacier_bucket.id}"
+  user   = aws_iam_user.archive_storage_access_user.name
+  policy = data.aws_iam_policy_document.archive_storage_access_policy_document.json
+}
+
+resource "aws_iam_access_key" "archive_storage_access_key" {
+  user    = aws_iam_user.archive_storage_access_user.name
 }
