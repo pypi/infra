@@ -38,6 +38,7 @@ resource "b2_bucket" "primary_storage_bucket_backblaze" {
 
 resource "b2_application_key" "primary_storage_read_key_backblaze" {
   key_name = "files-read-key-${var.files_bucket}"
+  bucket_id = b2_bucket.primary_storage_bucket_backblaze.id
   capabilities = ["readFiles"]
 }
 
