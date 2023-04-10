@@ -116,6 +116,26 @@ resource "fastly_service_vcl" "files" {
   }
 
   backend {
+    name              = "S3_Archive"
+    auto_loadbalance  = false
+    shield            = "bfi-wa-us"
+
+    request_condition = "NeverReq"
+    healthcheck       = "S3 Health"
+
+    address           = "${var.files_bucket}-archive.s3.amazonaws.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.files_bucket}-archive.s3.amazonaws.com"
+    ssl_sni_hostname  = "${var.files_bucket}-archive.s3.amazonaws.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
     name              = "S3"
     auto_loadbalance  = false
     shield            = "bfi-wa-us"
