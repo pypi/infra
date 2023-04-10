@@ -201,6 +201,13 @@ resource "fastly_service_vcl" "files" {
     response_condition = "Never"
   }
 
+  logging_datadog {
+    name               = "DataDog Log"
+    token              = var.datadog_token
+    placement          = "none"
+    response_condition = "Never"
+  }
+
   logging_s3 {
     name = "S3 Error Logs"
 
