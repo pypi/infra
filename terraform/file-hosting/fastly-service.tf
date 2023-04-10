@@ -76,18 +76,18 @@ resource "fastly_service_vcl" "files" {
   }
 
   backend {
-    name             = "GCS"
+    name = "B2"
     auto_loadbalance = false
-    shield           = "bfi-wa-us"
+    shield = "iad-va-us"
 
     request_condition = "Package File"
-    healthcheck       = "GCS Health"
+    healthcheck = "B2 Health"
 
-    address           = "${var.files_bucket}.storage.googleapis.com"
-    port              = 443
-    use_ssl           = true
-    ssl_cert_hostname = "${var.files_bucket}.storage.googleapis.com"
-    ssl_sni_hostname  = "${var.files_bucket}.storage.googleapis.com"
+    address = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+    port = 443
+    use_ssl = true
+    ssl_cert_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+    ssl_sni_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
 
     connect_timeout       = 5000
     first_byte_timeout    = 60000
@@ -96,18 +96,18 @@ resource "fastly_service_vcl" "files" {
   }
 
   backend {
-    name = "B2"
+    name             = "GCS"
     auto_loadbalance = false
-    shield = "iad-va-us"
+    shield           = "bfi-wa-us"
 
     request_condition = "NeverReq"
-    healthcheck = "B2 Health"
+    healthcheck       = "GCS Health"
 
-    address = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
-    port = 443
-    use_ssl = true
-    ssl_cert_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
-    ssl_sni_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+    address           = "${var.files_bucket}.storage.googleapis.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.files_bucket}.storage.googleapis.com"
+    ssl_sni_hostname  = "${var.files_bucket}.storage.googleapis.com"
 
     connect_timeout       = 5000
     first_byte_timeout    = 60000

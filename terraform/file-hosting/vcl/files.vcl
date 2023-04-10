@@ -75,7 +75,7 @@ sub vcl_recv {
     # Change our backend to S3 to look for the file there, re-enable clustering and continue
     # https://www.slideshare.net/Fastly/advanced-vcl-how-to-use-restart
     if (req.restarts > 0 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
-      set req.backend = F_S3;
+      set req.backend = F_GCS;
       set req.http.Fastly-Force-Shield = "1";
     }
 
@@ -142,9 +142,9 @@ sub vcl_fetch {
         set beresp.cacheable = true;
     }
 
-    # If we successfully got a 404 response from GCS for a Package URL restart
-    # to check S3 for the file!
-    if (req.restarts == 0 && req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/" && http_status_matches(beresp.status, "404")) {
+    # If we successfully got a 404 response from B2 for a Package URL restart
+    # to check GCS for the file!
+    if (req.restarts == 0 && req.backend == B2 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/" && http_status_matches(beresp.status, "404")) {
       restart;
     }
 
