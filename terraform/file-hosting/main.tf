@@ -11,6 +11,7 @@ variable "aws_access_key_id" { type = string }
 variable "aws_secret_access_key" { type = string }
 variable "gcs_access_key_id" { type = string }
 variable "gcs_secret_access_key" { type = string }
+variable "datadog_token" { type = string }
 
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }

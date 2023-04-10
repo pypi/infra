@@ -76,11 +76,31 @@ resource "fastly_service_vcl" "files" {
   }
 
   backend {
+    name = "B2"
+    auto_loadbalance = false
+    shield = "iad-va-us"
+
+    request_condition = "Package File"
+    healthcheck = "B2 Health"
+
+    address = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+    port = 443
+    use_ssl = true
+    ssl_cert_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+    ssl_sni_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
     name             = "GCS"
     auto_loadbalance = false
     shield           = "bfi-wa-us"
 
-    request_condition = "Package File"
+    request_condition = "NeverReq"
     healthcheck       = "GCS Health"
 
     address           = "${var.files_bucket}.storage.googleapis.com"
@@ -96,11 +116,31 @@ resource "fastly_service_vcl" "files" {
   }
 
   backend {
-    name              = "S3"
+    name              = "S3_Archive"
     auto_loadbalance  = false
-    request_condition = "NeverReq"
     shield            = "bfi-wa-us"
 
+    request_condition = "NeverReq"
+    healthcheck       = "S3 Health"
+
+    address           = "${var.files_bucket}-archive.s3.amazonaws.com"
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = "${var.files_bucket}-archive.s3.amazonaws.com"
+    ssl_sni_hostname  = "${var.files_bucket}-archive.s3.amazonaws.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
+    name              = "S3"
+    auto_loadbalance  = false
+    shield            = "bfi-wa-us"
+
+    request_condition = "NeverReq"
     healthcheck = "S3 Health"
 
     address           = "${var.files_bucket}.s3.amazonaws.com"
@@ -201,6 +241,12 @@ resource "fastly_service_vcl" "files" {
     response_condition = "Never"
   }
 
+  logging_datadog {
+    name               = "DataDog Log"
+    token              = var.datadog_token
+    response_condition = "Package Served From Fallback"
+  }
+
   logging_s3 {
     name = "S3 Error Logs"
 
@@ -249,6 +295,12 @@ resource "fastly_service_vcl" "files" {
     name      = "Never"
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
+  }
+
+  condition {
+    name      = "Package Served From Fallback"
+    type      = "RESPONSE"
+    statement = "req.restarts == 0 && req.backend == S3 && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && http_status_matches(beresp.status, \"200\")"
   }
 }
 
