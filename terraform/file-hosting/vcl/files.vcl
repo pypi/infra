@@ -16,10 +16,6 @@ sub vcl_recv {
     declare local var.AWS-Secret-Access-Key STRING;
     declare local var.S3-Bucket-Name STRING;
 
-    declare local var.GCS-Access-Key-ID STRING;
-    declare local var.GCS-Secret-Access-Key STRING;
-    declare local var.GCS-Bucket-Name STRING;
-
     # I'm not 100% sure on what this is exactly for, it was taken from the
     # Fastly documentation, however, what I *believe* it does is just ensure
     # that we don't serve a stale copy of the page from the shield node when
@@ -87,7 +83,15 @@ sub vcl_recv {
 
         # Compute the Authorization header that S3 requires to be able to
         # access the files stored there.
-        set req.http.Authorization = "AWS " var.AWS-Access-Key-ID ":" digest.hmac_sha1_base64(var.AWS-Secret-Access-Key, "GET" LF LF LF req.http.Date LF "/" var.S3-Bucket-Name req.url.path);
+        set req.http.Authorization = ""
+            "AWS " var.AWS-Access-Key-ID ":"
+            digest.hmac_sha1_base64(
+                var.AWS-Secret-Access-Key,
+                "GET" LF LF LF
+                req.http.Date LF
+                "/" var.S3-Bucket-Name req.url.path
+            )
+        ;
     }
 
     # Do not bother to attempt to run the caching mechanisms for methods that
@@ -222,7 +226,15 @@ sub vcl_miss {
       set bereq.http.Host = var.GCSBucketName ".storage.googleapis.com";
       set bereq.http.Date = now;
       set bereq.url = regsuball(bereq.url, "\+", urlencode("+"));
-      set bereq.http.Authorization = "AWS " var.GCSAccessKeyID ":" digest.hmac_sha1_base64(var.GCSSecretAccessKey, "GET" LF LF LF bereq.http.Date LF "/" var.GCSBucketName bereq.url.path);
+      set bereq.http.Authorization = ""
+          "AWS " var.GCSAccessKeyID ":"
+          digest.hmac_sha1_base64(
+              var.GCSSecretAccessKey,
+              "GET" LF LF LF
+              bereq.http.Date LF "/"
+              var.GCSBucketName bereq.url.path
+          )
+      ;
   }
 
   if (req.backend == F_B2) {
