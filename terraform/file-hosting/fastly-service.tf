@@ -204,8 +204,7 @@ resource "fastly_service_vcl" "files" {
   logging_datadog {
     name               = "DataDog Log"
     token              = var.datadog_token
-    placement          = "none"
-    response_condition = "Never"
+    response_condition = "Package Served From Fallback"
   }
 
   logging_s3 {
@@ -256,6 +255,12 @@ resource "fastly_service_vcl" "files" {
     name      = "Never"
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
+  }
+
+  condition {
+    name      = "Package Served From Fallback"
+    type      = "RESPONSE"
+    statement = "req.restarts == 0 && req.backend == S3 && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && http_status_matches(beresp.status, \"200\")"
   }
 }
 
