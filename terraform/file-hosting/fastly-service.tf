@@ -10,11 +10,11 @@ resource "fastly_service_vcl" "files" {
   snippet {
     name     = "GCS"
     priority = 100
-    type     = "recv"
+    type     = "miss"
     content  = <<-EOT
-        set var.GCS-Access-Key-ID = "${var.gcs_access_key_id}";
-        set var.GCS-Secret-Access-Key = "${var.gcs_secret_access_key}";
-        set var.GCS-Bucket-Name = "${var.files_bucket}";
+        set var.GCSAccessKeyID = "${var.gcs_access_key_id}";
+        set var.GCSSecretAccessKey = "${var.gcs_secret_access_key}";
+        set var.GCSBucketName = "${var.files_bucket}";
     EOT
   }
 
@@ -32,11 +32,12 @@ resource "fastly_service_vcl" "files" {
   snippet {
     name     = "B2"
     priority = 100
-    type     = "recv"
+    type     = "miss"
     content  = <<-EOT
-        set var.B2-Application-Key-ID = "${b2_application_key.primary_storage_read_key_backblaze.application_key_id}";
-        set var.B2-Application-Key = "${b2_application_key.primary_storage_read_key_backblaze.application_key}";
-        set var.B2-Bucket-Name = "${var.files_bucket}";
+        set var.B2AccessKey = "${b2_application_key.primary_storage_read_key_backblaze.application_key_id}";
+        set var.B2SecretKey = "${b2_application_key.primary_storage_read_key_backblaze.application_key}";
+        set var.B2Bucket    = "${var.files_bucket}";
+        set var.B2Region = "us-east-005";
     EOT
   }
 
@@ -81,7 +82,6 @@ resource "fastly_service_vcl" "files" {
     shield = "iad-va-us"
 
     request_condition = "Package File"
-    healthcheck = "B2 Health"
 
     address = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
     port = 443
@@ -242,9 +242,10 @@ resource "fastly_service_vcl" "files" {
   }
 
   logging_datadog {
-    name               = "DataDog Log"
+    name               = "Log2DataDog"
     token              = var.datadog_token
-    response_condition = "Package Served From Fallback"
+    response_condition = "Cache Fallback"
+    format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Storage had to fetch from fallback!\", \"short_message\": \"storage_fallback\" }"
   }
 
   logging_s3 {
@@ -280,6 +281,12 @@ resource "fastly_service_vcl" "files" {
   }
 
   condition {
+    name      = "Cache Fallback"
+    type      = "RESPONSE"
+    statement = "req.restarts > 0 && req.http.Fallback-Backend == \"1\" && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && (http_status_matches(resp.status, \"200\") || http_status_matches(resp.status, \"206\"))"
+  }
+
+  condition {
     name      = "NeverReq"
     type      = "REQUEST"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
@@ -295,12 +302,6 @@ resource "fastly_service_vcl" "files" {
     name      = "Never"
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
-  }
-
-  condition {
-    name      = "Package Served From Fallback"
-    type      = "RESPONSE"
-    statement = "req.restarts == 0 && req.backend == S3 && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && http_status_matches(beresp.status, \"200\")"
   }
 }
 
