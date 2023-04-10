@@ -79,9 +79,24 @@ sub vcl_recv {
       set req.http.Fastly-Force-Shield = "1";
     }
 
-    # Requests that are for an *actual* file get disaptched to Amazon S3 instead of
-    # to our typical backends. We need to setup the request to correctly access
-    # S3 and to authorize ourselves to S3.
+    # Requests that are for an *actual* file get disaptched to object storage instead of
+    # to our typical backends.
+
+    # If our file request is being dispatched to B2, we need to setup the request to correctly
+    # access B2 and to authorize ourselves to B2 with S3 compatible auth.
+    if (req.backend == F_B2 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        # Setup our environment to better match what S3 expects/needs
+        set req.http.Host = var.B2-Bucket-Name "s3.us-east-005.backblazeb2.com";
+        set req.http.Date = now;
+        set req.url = regsuball(req.url, "\+", urlencode("+"));
+
+        # Compute the Authorization header that B2 requires to be able to
+        # access the files stored there.
+        set req.http.Authorization = "AWS " var.B2-Application-Key-ID":" digest.hmac_sha1_base64(var.B2-Application-Key, "GET" LF LF LF req.http.Date LF "/" var.S3-Bucket-Name req.url.path);
+    }
+
+    # If our file request is being dispatched to S3, we need to setup the request to correctly
+    # access S3 and to authorize ourselves to S3.
     if (req.backend == F_S3 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
         # Setup our environment to better match what S3 expects/needs
         set req.http.Host = var.S3-Bucket-Name ".s3.amazonaws.com";
@@ -92,6 +107,7 @@ sub vcl_recv {
         # access the files stored there.
         set req.http.Authorization = "AWS " var.AWS-Access-Key-ID ":" digest.hmac_sha1_base64(var.AWS-Secret-Access-Key, "GET" LF LF LF req.http.Date LF "/" var.S3-Bucket-Name req.url.path);
     }
+
     # If our file request is being dispatched to GCS, setup the request to correctly
     # access GCS and authorize ourselves with GCS interoperability credentials.
     if (req.backend == GCS && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {

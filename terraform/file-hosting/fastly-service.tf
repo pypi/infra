@@ -96,11 +96,31 @@ resource "fastly_service_vcl" "files" {
   }
 
   backend {
+    name = "B2"
+    auto_loadbalance = false
+    shield = "iad-va-us"
+
+    request_condition = "NeverReq"
+    healthcheck = "B2 Health"
+
+    address = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+    port = 443
+    use_ssl = true
+    ssl_cert_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+    ssl_sni_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  backend {
     name              = "S3"
     auto_loadbalance  = false
-    request_condition = "NeverReq"
     shield            = "bfi-wa-us"
 
+    request_condition = "NeverReq"
     healthcheck = "S3 Health"
 
     address           = "${var.files_bucket}.s3.amazonaws.com"
