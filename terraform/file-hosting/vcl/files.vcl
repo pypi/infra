@@ -73,6 +73,7 @@ sub vcl_recv {
 
     # Requests that are for an *actual* file get disaptched to object storage instead of
     # to our typical backends.
+
     # If our file request is being dispatched to S3, we need to setup the request to correctly
     # access S3 and to authorize ourselves to S3.
     if (req.backend == F_S3 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
@@ -242,6 +243,7 @@ sub vcl_miss {
       set bereq.http.x-amz-date = strftime({"%Y%m%dT%H%M%SZ"}, now);
       set bereq.http.host = var.B2Bucket ".s3." var.B2Region ".backblazeb2.com";
       set bereq.url = querystring.remove(bereq.url);
+      set bereq.url = regsuball(bereq.url, "\+", urlencode("+"));
       set bereq.url = regsuball(urlencode(urldecode(bereq.url.path)), {"%2F"}, "/");
       set var.dateStamp = strftime({"%Y%m%d"}, now);
       set var.canonicalHeaders = ""
