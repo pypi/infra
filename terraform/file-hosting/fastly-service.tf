@@ -8,28 +8,6 @@ resource "fastly_service_vcl" "files" {
   }
 
   snippet {
-    name     = "GCS"
-    priority = 100
-    type     = "miss"
-    content  = <<-EOT
-        set var.GCSAccessKeyID = "${var.gcs_access_key_id}";
-        set var.GCSSecretAccessKey = "${var.gcs_secret_access_key}";
-        set var.GCSBucketName = "${var.files_bucket}";
-    EOT
-  }
-
-  snippet {
-    name     = "AWS"
-    priority = 100
-    type     = "recv"
-    content  = <<-EOT
-        set var.AWS-Access-Key-ID = "${var.aws_access_key_id}";
-        set var.AWS-Secret-Access-Key = "${var.aws_secret_access_key}";
-        set var.S3-Bucket-Name = "${var.files_bucket}";
-    EOT
-  }
-
-  snippet {
     name     = "B2"
     priority = 100
     type     = "miss"
@@ -46,9 +24,10 @@ resource "fastly_service_vcl" "files" {
     priority = 100
     type     = "recv"
     content  = <<-EOT
-        set var.AWS-Archive-Access-Key-ID = "${aws_iam_access_key.archive_storage_access_key.id}";
-        set var.AWS-Archive-Secret-Access-Key = "${aws_iam_access_key.archive_storage_access_key.secret}";
-        set var.S3-Archive-Bucket-Name = "${aws_s3_bucket.archive_storage_glacier_bucket.id}";
+        set var.AWSArchiveAccessKeyID = "${aws_iam_access_key.archive_storage_access_key.id}";
+        set var.AWSArchiveSecretAccessKey = "${aws_iam_access_key.archive_storage_access_key.secret}";
+        set var.AWSArchiveBucket = "${aws_s3_bucket.archive_storage_glacier_bucket.id}";
+        set var.AWSArchiveRegion = "${aws_s3_bucket.archive_storage_glacier_bucket.region}";
     EOT
   }
 
@@ -96,26 +75,6 @@ resource "fastly_service_vcl" "files" {
   }
 
   backend {
-    name             = "GCS"
-    auto_loadbalance = false
-    shield           = "bfi-wa-us"
-
-    request_condition = "NeverReq"
-    healthcheck       = "GCS Health"
-
-    address           = "${var.files_bucket}.storage.googleapis.com"
-    port              = 443
-    use_ssl           = true
-    ssl_cert_hostname = "${var.files_bucket}.storage.googleapis.com"
-    ssl_sni_hostname  = "${var.files_bucket}.storage.googleapis.com"
-
-    connect_timeout       = 5000
-    first_byte_timeout    = 60000
-    between_bytes_timeout = 15000
-    error_threshold       = 5
-  }
-
-  backend {
     name              = "S3_Archive"
     auto_loadbalance  = false
     shield            = "bfi-wa-us"
@@ -135,58 +94,6 @@ resource "fastly_service_vcl" "files" {
     error_threshold       = 5
   }
 
-  backend {
-    name              = "S3"
-    auto_loadbalance  = false
-    shield            = "bfi-wa-us"
-
-    request_condition = "NeverReq"
-    healthcheck = "S3 Health"
-
-    address           = "${var.files_bucket}.s3.amazonaws.com"
-    port              = 443
-    use_ssl           = true
-    ssl_cert_hostname = "${var.files_bucket}.s3.amazonaws.com"
-    ssl_sni_hostname  = "${var.files_bucket}.s3.amazonaws.com"
-
-    connect_timeout       = 5000
-    first_byte_timeout    = 60000
-    between_bytes_timeout = 15000
-    error_threshold       = 5
-  }
-
-  backend {
-    name             = "Mirror"
-    auto_loadbalance = false
-    shield           = "london_city-uk"
-
-    request_condition = "Primary Failure (Mirror-able)"
-    healthcheck       = "Mirror Health"
-
-    address           = var.mirror
-    port              = 443
-    use_ssl           = true
-    ssl_cert_hostname = var.mirror
-    ssl_sni_hostname  = var.mirror
-
-    connect_timeout = 3000
-    error_threshold = 5
-  }
-
-  healthcheck {
-    name = "GCS Health"
-
-    host   = "${var.files_bucket}.storage.googleapis.com"
-    method = "GET"
-    path   = "/_health.txt"
-
-    check_interval = 3000
-    timeout        = 2000
-    threshold      = 2
-    initial        = 2
-    window         = 4
-  }
-
   healthcheck {
     name = "S3 Health"
 
@@ -200,21 +107,6 @@ resource "fastly_service_vcl" "files" {
     initial        = 2
     window         = 4
   }
-
-  healthcheck {
-    name = "Mirror Health"
-
-    host   = var.domain
-    method = "GET"
-    path   = "/last-modified"
-
-    check_interval = 3000
-    timeout        = 2000
-    threshold      = 2
-    initial        = 2
-    window         = 4
-  }
-
 
   vcl {
     name    = "Main"
@@ -274,16 +166,15 @@ resource "fastly_service_vcl" "files" {
   }
 
   condition {
-    name      = "Primary Failure (Mirror-able)"
-    type      = "REQUEST"
-    statement = "(!req.backend.healthy || req.restarts > 0) && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\""
-    priority  = 2
-  }
-
-  condition {
     name      = "Cache Fallback"
     type      = "RESPONSE"
     statement = "req.restarts > 0 && req.http.Fallback-Backend == \"1\" && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && (http_status_matches(resp.status, \"200\") || http_status_matches(resp.status, \"206\"))"
+  }
+
+  condition {
+    name      = "Never"
+    type      = "RESPONSE"
+    statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
 
   condition {
@@ -296,12 +187,6 @@ resource "fastly_service_vcl" "files" {
     name      = "5xx Error"
     type      = "RESPONSE"
     statement = "(resp.status >= 500 && resp.status < 600)"
-  }
-
-  condition {
-    name      = "Never"
-    type      = "RESPONSE"
-    statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
 }
 
