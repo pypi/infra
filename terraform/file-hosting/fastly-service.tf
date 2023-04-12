@@ -119,14 +119,14 @@ resource "fastly_service_vcl" "files" {
   }
 
   logging_datadog {
-    name               = "DataDog: Log Storage Fallback success"
+    name               = "Log Storage Fallback success"
     token              = var.datadog_token
     response_condition = "Storage Fallback success"
     format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Storage had to fetch from fallback!\", \"short_message\": \"storage_fallback\" }"
   }
 
   logging_datadog {
-    name               = "DataDog: Log Storage Fallback failure"
+    name               = "Log Storage Fallback failure"
     token              = var.datadog_token
     response_condition = "Storage Fallback failure"
     format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Storage failed to fetch from fallback!\", \"short_message\": \"storage_fallback_failure\" }"
