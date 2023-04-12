@@ -134,10 +134,17 @@ resource "fastly_service_vcl" "files" {
   }
 
   logging_datadog {
-    name               = "Log2DataDog"
+    name               = "DataDog: Log Storage Fallback success"
     token              = var.datadog_token
-    response_condition = "Cache Fallback"
+    response_condition = "Storage Fallback success"
     format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Storage had to fetch from fallback!\", \"short_message\": \"storage_fallback\" }"
+  }
+
+  logging_datadog {
+    name               = "DataDog: Log Storage Fallback failure"
+    token              = var.datadog_token
+    response_condition = "Storage Fallback failure"
+    format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Storage failed to fetch from fallback!\", \"short_message\": \"storage_fallback_failure\" }"
   }
 
   logging_s3 {
@@ -166,9 +173,15 @@ resource "fastly_service_vcl" "files" {
   }
 
   condition {
-    name      = "Cache Fallback"
+    name      = "Storage Fallback success"
     type      = "RESPONSE"
     statement = "req.restarts > 0 && req.http.Fallback-Backend == \"1\" && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && (http_status_matches(resp.status, \"200\") || http_status_matches(resp.status, \"206\"))"
+  }
+
+  condition {
+    name      = "Storage Fallback failure"
+    type      = "RESPONSE"
+    statement = "req.restarts > 0 && req.http.Fallback-Backend == \"1\" && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && !(http_status_matches(resp.status, \"200\") || http_status_matches(resp.status, \"206\"))"
   }
 
   condition {
