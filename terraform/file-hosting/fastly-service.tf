@@ -80,7 +80,6 @@ resource "fastly_service_vcl" "files" {
     shield            = "bfi-wa-us"
 
     request_condition = "NeverReq"
-    healthcheck       = "S3 Health"
 
     address           = "${var.files_bucket}-archive.s3.amazonaws.com"
     port              = 443
@@ -92,20 +91,6 @@ resource "fastly_service_vcl" "files" {
     first_byte_timeout    = 60000
     between_bytes_timeout = 15000
     error_threshold       = 5
-  }
-
-  healthcheck {
-    name = "S3 Health"
-
-    host   = "${var.files_bucket}.s3.amazonaws.com"
-    method = "GET"
-    path   = "/_health.txt"
-
-    check_interval = 3000
-    timeout        = 2000
-    threshold      = 2
-    initial        = 2
-    window         = 4
   }
 
   vcl {
