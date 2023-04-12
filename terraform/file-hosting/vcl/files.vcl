@@ -88,7 +88,7 @@ sub vcl_fetch {
     # to check S3 Archive for the file! (Note 403, which sucks but is apparently the
     # response you get for a non existent file from B2's S3 interop  when auth'd???
     if (
-      req.restarts == 0 && req.backend == F_S3_Archive
+      req.restarts == 0 && req.backend == F_B2
       && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/"
       && (
         http_status_matches(beresp.status, "404")

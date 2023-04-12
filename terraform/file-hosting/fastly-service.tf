@@ -22,7 +22,7 @@ resource "fastly_service_vcl" "files" {
   snippet {
     name     = "AWS-Archive"
     priority = 100
-    type     = "recv"
+    type     = "miss"
     content  = <<-EOT
         set var.AWSArchiveAccessKeyID = "${aws_iam_access_key.archive_storage_access_key.id}";
         set var.AWSArchiveSecretAccessKey = "${aws_iam_access_key.archive_storage_access_key.secret}";
@@ -80,7 +80,6 @@ resource "fastly_service_vcl" "files" {
     shield            = "bfi-wa-us"
 
     request_condition = "NeverReq"
-    healthcheck       = "S3 Health"
 
     address           = "${var.files_bucket}-archive.s3.amazonaws.com"
     port              = 443
@@ -92,20 +91,6 @@ resource "fastly_service_vcl" "files" {
     first_byte_timeout    = 60000
     between_bytes_timeout = 15000
     error_threshold       = 5
-  }
-
-  healthcheck {
-    name = "S3 Health"
-
-    host   = "${var.files_bucket}.s3.amazonaws.com"
-    method = "GET"
-    path   = "/_health.txt"
-
-    check_interval = 3000
-    timeout        = 2000
-    threshold      = 2
-    initial        = 2
-    window         = 4
   }
 
   vcl {
@@ -134,10 +119,17 @@ resource "fastly_service_vcl" "files" {
   }
 
   logging_datadog {
-    name               = "Log2DataDog"
+    name               = "DataDog: Log Storage Fallback success"
     token              = var.datadog_token
-    response_condition = "Cache Fallback"
+    response_condition = "Storage Fallback success"
     format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Storage had to fetch from fallback!\", \"short_message\": \"storage_fallback\" }"
+  }
+
+  logging_datadog {
+    name               = "DataDog: Log Storage Fallback failure"
+    token              = var.datadog_token
+    response_condition = "Storage Fallback failure"
+    format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Storage failed to fetch from fallback!\", \"short_message\": \"storage_fallback_failure\" }"
   }
 
   logging_s3 {
@@ -166,9 +158,15 @@ resource "fastly_service_vcl" "files" {
   }
 
   condition {
-    name      = "Cache Fallback"
+    name      = "Storage Fallback success"
     type      = "RESPONSE"
     statement = "req.restarts > 0 && req.http.Fallback-Backend == \"1\" && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && (http_status_matches(resp.status, \"200\") || http_status_matches(resp.status, \"206\"))"
+  }
+
+  condition {
+    name      = "Storage Fallback failure"
+    type      = "RESPONSE"
+    statement = "req.restarts > 0 && req.http.Fallback-Backend == \"1\" && req.url ~ \"^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/\" && !(http_status_matches(resp.status, \"200\") || http_status_matches(resp.status, \"206\"))"
   }
 
   condition {
