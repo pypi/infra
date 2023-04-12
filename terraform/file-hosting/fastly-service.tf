@@ -22,7 +22,7 @@ resource "fastly_service_vcl" "files" {
   snippet {
     name     = "AWS-Archive"
     priority = 100
-    type     = "recv"
+    type     = "miss"
     content  = <<-EOT
         set var.AWSArchiveAccessKeyID = "${aws_iam_access_key.archive_storage_access_key.id}";
         set var.AWSArchiveSecretAccessKey = "${aws_iam_access_key.archive_storage_access_key.secret}";
