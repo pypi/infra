@@ -135,7 +135,7 @@ resource "fastly_service_vcl" "pypi" {
   }
 
   condition {
-    name      = "Blocked by masked IP"
+    name      = "masked_ip_blocklist"
     type      = "REQUEST"
     priority  = 0
     statement = "client.ip ~ masked_ip_blocklist"
