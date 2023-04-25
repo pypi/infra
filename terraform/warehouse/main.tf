@@ -130,15 +130,11 @@ resource "fastly_service_vcl" "pypi" {
     name = "masked_ip_blocklist"
   }
 
-  acl {
-    name = "masked_ip_blocklist"
-  }
-
   condition {
     name      = "masked_ip_blocklist"
     type      = "REQUEST"
     priority  = 0
-    statement = "client.ip ~ masked_ip_blocklist"
+    statement = "table.contains(masked_ip_blocklist, req.http.Warehouse-Hashed-IP)"
   }
 
   vcl {
