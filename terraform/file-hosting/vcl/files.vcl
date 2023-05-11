@@ -5,6 +5,10 @@ sub vcl_recv {
     # Enable Segmented Caching for package URLS
     if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
         set req.enable_segmented_caching = true;
+        if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*).metadata$") {
+            # Don't enable segmented caching if we're serving a metadata file
+            set req.enable_segmented_caching = false;
+        }
     }
 
     # I'm not 100% sure on what this is exactly for, it was taken from the
