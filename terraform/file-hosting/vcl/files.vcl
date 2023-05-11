@@ -141,6 +141,17 @@ sub vcl_fetch {
 
     # Check if we are serving a .metadata file, which are stored uncompressed
     if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*).metadata$" ) {
+        # Always set a Vary header, even if we don't end up compressing
+        # the object, because the uncompressed version should only be
+        # used when the request does NOT request the compressed one.
+        if (!beresp.http.Vary ~ "Accept-Encoding") {
+            if (beresp.http.Vary) {
+                set beresp.http.Vary = beresp.http.Vary ", Accept-Encoding";
+            } else {
+                set beresp.http.Vary = "Accept-Encoding";
+            }
+        }
+
         # Perform compression if the client claims to understand it
         if (req.http.Accept-Encoding == "gzip") {
             set beresp.gzip = true;
