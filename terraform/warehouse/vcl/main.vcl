@@ -183,10 +183,10 @@ sub vcl_recv {
         # See https://developer.fastly.com/reference/vcl/variables/geolocation/
         # Any placeholder values for reserved blocks are sent through
         # and left to pypi/warehouse on how to process
-        set req.http.Warehouse-Continent = client.geo.continent_code;
+        set req.http.Warehouse-Continent-Code = client.geo.continent_code;
         set req.http.Warehouse-Country-Code = client.geo.country_code;
-        set req.http.Warehouse-Country-Code-3 = client.geo.country_code3;
-        set req.http.Warehouse-Country = client.geo.country_name;
+        set req.http.Warehouse-Country-Code3 = client.geo.country_code3;
+        set req.http.Warehouse-Country-Name = client.geo.country_name;
         set req.http.Warehouse-Region = client.geo.region;
         set req.http.Warehouse-City = client.geo.city;
     }
