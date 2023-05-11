@@ -139,6 +139,19 @@ sub vcl_fetch {
         }
     }
 
+    # Check if we are serving a .metadata file, which are stored uncompressed
+    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*).metadata$" ) {
+        # Perform compression if the client claims to understand it
+        if (req.http.Accept-Encoding == "gzip") {
+            set beresp.gzip = true;
+        } else if (req.http.Accept-Encoding == "br") {
+            set beresp.brotli = true;
+        } else {
+            set beresp.gzip = false;
+            set beresp.brotli = false;
+        }
+    }
+
     # If there is a Set-Cookie header, we'll ensure that we do not cache the
     # response.
     if (beresp.http.Set-Cookie) {
