@@ -113,8 +113,9 @@ sub vcl_recv {
     #   * /account/verify-organization-role/
     #   * /account/two-factor/
     #   * /account/webauthn-authenticate/
+    #   * /accounts/search/
     #   * /pypi
-    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|pypi)") {
+    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|account/search/|pypi)") {
         set req.url = req.url.path;
     }
 
