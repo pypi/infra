@@ -115,7 +115,7 @@ sub vcl_recv {
     #   * /account/webauthn-authenticate/
     #   * /accounts/search/
     #   * /pypi
-    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|account/search/|pypi)") {
+    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|accounts/search/|pypi)") {
         set req.url = req.url.path;
     }
 
