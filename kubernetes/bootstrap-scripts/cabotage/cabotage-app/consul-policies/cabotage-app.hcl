@@ -1,3 +1,0 @@
-key "cabotage" {
-  policy = "write"
-}

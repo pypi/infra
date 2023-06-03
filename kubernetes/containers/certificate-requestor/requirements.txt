@@ -1,3 +1,0 @@
-kubernetes==4.0.0
-click==6.7
-cryptography==2.1.4

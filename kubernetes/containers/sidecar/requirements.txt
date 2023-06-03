@@ -1,4 +1,0 @@
-click==6.7
-cryptography==2.1.4
-iso8601==0.1.12
-requests==2.18.4

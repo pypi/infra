@@ -1,2 +1,0 @@
-kubernetes==4.0.0
-click==6.7

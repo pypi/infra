@@ -1,4 +1,0 @@
-#!/bin/bash
-eval $(minikube docker-env)
-docker build -t cabotage/"$(basename "$(pwd)")":v1.0.0a1 .
-docker push cabotage/"$(basename "$(pwd)")":v1.0.0a1
