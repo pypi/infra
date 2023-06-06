@@ -1,0 +1,22 @@
+{
+  "name": "compute-starter-kit-javascript-empty",
+  "version": "0.4.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastly/compute-starter-kit-javascript-empty.git"
+  },
+  "type": "module",
+  "author": "oss@fastly.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fastly/compute-starter-kit-javascript-empty/issues"
+  },
+  "homepage": "https://developer.fastly.com/solutions/starters/compute-starter-kit-javascript-empty",
+  "dependencies": {
+    "@fastly/js-compute": "^2.0.1"
+  },
+  "scripts": {
+    "build": "js-compute-runtime ./src/index.js ./bin/main.wasm",
+    "deploy": "fastly compute publish"
+  }
+}

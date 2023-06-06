@@ -1,0 +1,12 @@
+# This file describes a Fastly Compute@Edge package. To learn more visit:
+# https://developer.fastly.com/reference/fastly-toml/
+
+authors = ["chloe.gerhardson@pyfound.org"]
+description = "Test"
+language = "javascript"
+manifest_version = 3
+name = "Compute@Edge Test"
+service_id = ""
+
+[scripts]
+  build = "npm run build"
