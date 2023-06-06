@@ -1,7 +1,8 @@
 name: Deploy Compute@Edge GeoIp
 on:
   push:
-    branches: [*]
+#    branches: [main] 
+## Note: by removing the branches value, the workflow will run when a push is made to any branch. This is to serve for testing. 
 
 jobs:
   deploy:
