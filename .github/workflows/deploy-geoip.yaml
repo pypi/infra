@@ -9,8 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      with:
-        project_directory: fastly-compute/geoip
 
     - name: Install project dependencies
       run: npm install
@@ -18,6 +16,6 @@ jobs:
     - name: Deploy to Compute@Edge
       uses: fastly/compute-actions@v5
       with:
-        project_directory: fastly-compute/geoip
+        project_directory: ./fastly-compute/geoip
       env:
         FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN }}
