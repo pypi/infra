@@ -12,6 +12,8 @@ jobs:
 
     - name: Install project dependencies
       run: npm install
+      with:
+        project_directory: fastly-compute/geoip
 
     - name: Deploy to Compute@Edge
       uses: fastly/compute-actions@v5
