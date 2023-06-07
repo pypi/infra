@@ -20,4 +20,3 @@ jobs:
         project_directory: ./fastly-compute/geoip
       env:
         FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN }}
-# Testing for Auth
