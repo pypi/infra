@@ -9,11 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        project_directory: fastly-compute/geoip
 
     - name: Install project dependencies
       run: npm install
-      with:
-        project_directory: fastly-compute/geoip
 
     - name: Deploy to Compute@Edge
       uses: fastly/compute-actions@v5
