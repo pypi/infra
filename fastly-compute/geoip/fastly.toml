@@ -5,7 +5,7 @@ authors = ["chloe.gerhardson@pyfound.org"]
 description = "Test"
 language = "javascript"
 manifest_version = 3
-name = "Compute@Edge Test"
+name = "geoip"
 service_id = ""
 
 [scripts]
