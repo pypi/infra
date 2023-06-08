@@ -12,7 +12,7 @@ async function app(event) {
         country_code: geo.country_code,
         country_code3: geo.country_code3,
         country_name: geo.country_name,
-        region: null,
+        region: geo.region,
       },
 })
 
