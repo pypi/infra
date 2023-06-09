@@ -123,6 +123,21 @@ resource "aws_route53_record" "apex_txt" {
   records = var.apex_txt
 }
 
+resource "aws_route53_record" "helpscout_dkim_1" {
+  zone_id = aws_route53_zone.primary.zone_id
+  name    = "strong1._domainkey.${var.primary_domain}"
+  type    = "CNAME"
+  ttl     = 3600
+  records = ["strong1._domainkey.helpscout.net"]
+}
+
+resource "aws_route53_record" "helpscout_dkim_2" {
+  zone_id = aws_route53_zone.primary.zone_id
+  name    = "strong2._domainkey.${var.primary_domain}"
+  type    = "CNAME"
+  ttl     = 3600
+  records = ["strong2._domainkey.helpscout.net"]
+}
 
 resource "aws_route53_zone" "user_content" {
   name              = var.user_content_domain
