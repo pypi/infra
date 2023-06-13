@@ -6,7 +6,7 @@ description = "Test"
 language = "javascript"
 manifest_version = 3
 name = "geoip"
-service_id = "q5KEu8R9Q1khWeFbWNPXQ3"
+service_id = "CnsNqIdpSj1tZNLTl6PUi4"
 
 [scripts]
   build = "npm run build"
