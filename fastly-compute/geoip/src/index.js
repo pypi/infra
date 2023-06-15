@@ -1,8 +1,21 @@
 /// <reference types="@fastly/js-compute" />
 
 import { getGeolocationForIpAddress } from "fastly:geolocation"
+import { ConfigStore } from "fastly:config-store";
+
 async function app(event) {
   try {
+   const configStore = new ConfigStore('strings')
+   const token = await configStore.get('token')
+
+    // If the value doesn't exist or is false, return Unauthorized
+   if (!token) {
+     let respBody = JSON.stringify({ Error: "Unauthorized" });
+     return new Response(respBody, {
+       status: 401,
+       headers: { 'Content-Type': 'application/json' }
+     });
+    }
     let ip = new URL(event.request.url).searchParams.get('ip') || event.client.address
     let geo = getGeolocationForIpAddress(ip);
     let respBody = JSON.stringify({
@@ -14,7 +27,7 @@ async function app(event) {
         country_name: geo.country_name,
         region: geo.region,
       },
-})
+});
 
     return new Response( respBody, {
       headers: {

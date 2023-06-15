@@ -10,3 +10,10 @@ service_id = "CnsNqIdpSj1tZNLTl6PUi4"
 
 [scripts]
   build = "npm run build"
+
+[local_server]
+  [local_server.config_stores]
+    [local_server.config_stores.strings]
+      file = ".secret.json"
+      format = "json"
+
