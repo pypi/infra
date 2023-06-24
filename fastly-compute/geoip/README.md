@@ -1,11 +1,35 @@
-# Empty Starter Kit for JavaScript
+# geoip
 
-[![Deploy to Fastly](https://deploy.edgecompute.app/button)](https://deploy.edgecompute.app/deploy)
+Provides an authenticated service that serves Fastly geoip information for IP
+addresses. This is useful for backfilling past events in services that have
+transitioned to using geoip info and for retrieving geoip information when
+requests do not transit the CDN layer.
 
-An empty application template for the Fastly Compute@Edge environment which simply returns a 200 OK response.
+## Local development
 
-**For more details about other starter kits for Compute@Edge, see the [Fastly developer hub](https://developer.fastly.com/solutions/starters)**
+```shell
+npm install
+npx fastly compute serve --watch
+```
 
-## Security issues
+This will start the service locally on port 7676 and reload on file changes.
 
-Please see our [SECURITY.md](SECURITY.md) for guidance on reporting security-related issues.
+In a separate terminal you can now test the service:
+
+```shell
+$ curl -s localhost:7676?ip=127.0.0.1 | jq '.'
+{
+  "Error": "Unauthorized"
+}
+$ curl -s -H "X-Secret: sup3rs3cr3t" localhost:7676?ip=127.0.0.1 | jq '.'
+{
+  "geo": {
+    "city": "San Francisco",
+    "continent": "NA",
+    "country_code": "US",
+    "country_code3": "USA",
+    "country_name": "United States of America",
+    "region": "CA"
+  }
+}
+```
