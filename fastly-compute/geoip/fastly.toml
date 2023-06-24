@@ -2,7 +2,7 @@
 # https://developer.fastly.com/reference/fastly-toml/
 
 authors = ["chloe.gerhardson@pyfound.org"]
-description = "Test"
+description = "Retrieves geoip information for arbitrary ip addresses"
 language = "javascript"
 manifest_version = 3
 name = "geoip"
