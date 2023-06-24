@@ -13,7 +13,6 @@ service_id = "CnsNqIdpSj1tZNLTl6PUi4"
 
 [local_server]
   [local_server.config_stores]
-    [local_server.config_stores.strings]
+    [local_server.config_stores.geoip_auth]
       file = ".secret.json"
       format = "json"
-

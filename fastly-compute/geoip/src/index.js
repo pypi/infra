@@ -5,11 +5,15 @@ import { ConfigStore } from "fastly:config-store";
 
 async function app(event) {
   try {
-   const configStore = new ConfigStore('strings')
-   const token = await configStore.get('token')
+   const configStore = new ConfigStore('geoip_auth')
 
-    // If the value doesn't exist or is false, return Unauthorized
-   if (!token) {
+   // Fetch token from X-Secret header
+   var token = event.request.headers.get('X-Secret');
+   // Check if the auth token exists in the ConfigStore
+   var auth = await configStore.get(token)
+
+   // If the value doesn't exist or is false, return Unauthorized
+   if (!auth) {
      let respBody = JSON.stringify({ Error: "Unauthorized" });
      return new Response(respBody, {
        status: 401,
