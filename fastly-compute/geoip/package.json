@@ -1,19 +1,19 @@
 {
-  "name": "compute-starter-kit-javascript-empty",
-  "version": "0.4.0",
+  "name": "geoip",
+  "version": "0.0.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fastly/compute-starter-kit-javascript-empty.git"
+    "url": "git+https://github.com/pypi/infra/tree/main/fastly-compute/geoip.git"
   },
   "type": "module",
-  "author": "oss@fastly.com",
+  "author": "chloe.gerhardson@pyfound.org",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/fastly/compute-starter-kit-javascript-empty/issues"
+    "url": "https://github.com/pypi/infra/issues"
   },
-  "homepage": "https://developer.fastly.com/solutions/starters/compute-starter-kit-javascript-empty",
+  "homepage": "",
   "dependencies": {
-    "@fastly/js-compute": "^2.0.1"
+    "@fastly/js-compute": "^2.4.0"
   },
   "scripts": {
     "build": "js-compute-runtime ./src/index.js ./bin/main.wasm",
