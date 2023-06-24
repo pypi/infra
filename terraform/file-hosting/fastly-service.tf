@@ -68,9 +68,9 @@ resource "fastly_service_vcl" "files" {
     ssl_cert_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
     ssl_sni_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
 
-    connect_timeout       = 250
-    first_byte_timeout    = 500
-    between_bytes_timeout = 1000
+    connect_timeout       = 1000
+    first_byte_timeout    = 1500
+    between_bytes_timeout = 2000
     error_threshold       = 5
   }
 
