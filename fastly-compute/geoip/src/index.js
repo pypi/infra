@@ -1,22 +1,23 @@
 /// <reference types="@fastly/js-compute" />
 
-import { getGeolocationForIpAddress } from "fastly:geolocation"
+import { getGeolocationForIpAddress } from "fastly:geolocation";
 import { ConfigStore } from "fastly:config-store";
 
 async function app(event) {
   try {
-   const configStore = new ConfigStore('strings')
-   const token = await configStore.get('token')
+    const configStore = new ConfigStore("strings");
+    const secret = event.request.headers.get("X-Secret");
+    const token = await configStore.get(secret);
 
-    // If the value doesn't exist or is false, return Unauthorized
-   if (!token) {
-     let respBody = JSON.stringify({ Error: "Unauthorized" });
-     return new Response(respBody, {
-       status: 401,
-       headers: { 'Content-Type': 'application/json' }
-     });
+    if (!token) {
+      let respBody = JSON.stringify({ Error: "Unauthorized" });
+      return new Response(respBody, {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
-    let ip = new URL(event.request.url).searchParams.get('ip') || event.client.address
+    let ip =
+      new URL(event.request.url).searchParams.get("ip") || event.client.address;
     let geo = getGeolocationForIpAddress(ip);
     let respBody = JSON.stringify({
       geo: {
@@ -27,9 +28,9 @@ async function app(event) {
         country_name: geo.country_name,
         region: geo.region,
       },
-});
+    });
 
-    return new Response( respBody, {
+    return new Response(respBody, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -37,7 +38,7 @@ async function app(event) {
   } catch (error) {
     console.error(error);
     return new Response("Internal Server Error", {
-      status: 500
+      status: 500,
     });
   }
 }
