@@ -1,11 +1,13 @@
-# Empty Starter Kit for JavaScript
+# Get Geolocation Information About a Given IP Address
 
-[![Deploy to Fastly](https://deploy.edgecompute.app/button)](https://deploy.edgecompute.app/deploy)
+This service using [Fastly's Compute@Edge](https://developer.fastly.com/learning/compute/) to get specific geolcation information about a given IP address, and deploys automagically using Github Actions.
 
-An empty application template for the Fastly Compute@Edge environment which simply returns a 200 OK response.
+## Getting started
 
-**For more details about other starter kits for Compute@Edge, see the [Fastly developer hub](https://developer.fastly.com/solutions/starters)**
+- Be sure to install [Fastly's CLI](https://developer.fastly.com/learning/tools/cli/)
+- As well as the dependencies: `npm install`
 
-## Security issues
+## Try it out locally
 
-Please see our [SECURITY.md](SECURITY.md) for guidance on reporting security-related issues.
+`fastly compute serve --watch`
+- This application should now be running on http://localhost:7676
