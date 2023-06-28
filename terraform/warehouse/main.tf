@@ -3,7 +3,6 @@ variable "zone_id" { type = string }
 variable "domain" { type = string }
 variable "extra_domains" { type = list(any) }
 variable "backend" { type = string }
-variable "mirror" { type = string }
 variable "s3_logging_keys" { type = map(any) }
 variable "linehaul_enabled" { type = bool }
 variable "linehaul_gcs" { type = map(any) }
@@ -78,26 +77,6 @@ resource "fastly_service_vcl" "pypi" {
     error_threshold       = 5
   }
 
-  backend {
-    name             = "Mirror"
-    auto_loadbalance = false
-    shield           = "london_city-uk"
-
-    request_condition = "Primary Failure (Mirror-able)"
-    healthcheck       = "Mirror Health"
-
-    address           = var.mirror
-    port              = 443
-    use_ssl           = true
-    ssl_cert_hostname = var.mirror
-    ssl_sni_hostname  = var.mirror
-
-    connect_timeout       = 5000
-    first_byte_timeout    = 60000
-    between_bytes_timeout = 15000
-    error_threshold       = 5
-  }
-
   healthcheck {
     name = "Application Health"
 
@@ -107,20 +86,6 @@ resource "fastly_service_vcl" "pypi" {
 
     check_interval = 6000
     timeout        = 4000
-    threshold      = 2
-    initial        = 2
-    window         = 4
-  }
-
-  healthcheck {
-    name = "Mirror Health"
-
-    host   = var.domain
-    method = "GET"
-    path   = "/last-modified"
-
-    check_interval = 3000
-    timeout        = 2000
     threshold      = 2
     initial        = 2
     window         = 4
@@ -212,13 +177,6 @@ resource "fastly_service_vcl" "pypi" {
     response          = "Forbidden"
     content           = "Your IP Address has been temporarily blocked."
     content_type      = "text/plain"
-  }
-
-  condition {
-    name      = "Primary Failure (Mirror-able)"
-    type      = "REQUEST"
-    statement = "(!req.backend.healthy || req.restarts > 0) && (req.url ~ \"^/simple/\" || req.url ~ \"^/pypi/[^/]+(/[^/]+)?/json$\")"
-    priority  = 1
   }
 
   condition {
