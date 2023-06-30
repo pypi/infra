@@ -4,8 +4,8 @@ import { getGeolocationForIpAddress } from "fastly:geolocation";
 import { ConfigStore } from "fastly:config-store";
 
 async function app(event) {
-  try {
-    const configStore = new ConfigStore("strings");
+  //try {
+    const configStore = new ConfigStore("geoip_auth");
     const secret = event.request.headers.get("X-Secret");
     const token = await configStore.get(secret);
 
