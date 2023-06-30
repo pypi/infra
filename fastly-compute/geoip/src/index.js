@@ -4,7 +4,6 @@ import { getGeolocationForIpAddress } from "fastly:geolocation";
 import { ConfigStore } from "fastly:config-store";
 
 async function app(event) {
-  //try {
     const configStore = new ConfigStore("geoip_auth");
     const secret = event.request.headers.get("X-Secret");
     const token = await configStore.get(secret);
@@ -35,12 +34,6 @@ async function app(event) {
         "Content-Type": "application/json",
       },
     });
-  } catch (error) {
-    console.error(error);
-    return new Response("Internal Server Error", {
-      status: 500,
-    });
   }
-}
 
 addEventListener("fetch", (event) => event.respondWith(app(event)));
