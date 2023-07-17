@@ -123,7 +123,7 @@ module "test-pypi" {
   domain  = "test.pypi.org"
   # Note:  the first domain in "extra_domains" gets an XMLRPC exception/bypass in VCL
   extra_domains   = ["testpypi.python.org", "test.pypi.io", "warehouse-staging.python.org"]
-  backend         = "warehouse-test.ingress.cmh1.psfhosted.org"
+  backend         = "warehouse-test.ingress.us-east-2.pypi.io"
   s3_logging_keys = var.fastly_s3_logging
 
   warehouse_token   = var.test_pypi_warehouse_token
@@ -174,7 +174,7 @@ module "test-file-hosting" {
   zone_id             = module.dns.user_content_zone_id
   domain              = "test-files.pythonhosted.org"
   fastly_service_name = "Test PyPI File Hosting"
-  conveyor_address    = "conveyor-test.ingress.cmh1.psfhosted.org"
+  conveyor_address    = "test-conveyor.ingress.us-east-2.pypi.io"
   files_bucket        = "pypi-files-staging"
   s3_logging_keys     = var.fastly_s3_logging
   datadog_token       = var.datadog_token
@@ -214,7 +214,7 @@ module "test-docs-hosting" {
   sitename         = "Test PyPI"
   zone_id          = module.dns.user_content_zone_id
   domain           = "test.pythonhosted.org"
-  conveyor_address = "conveyor-test.cmh1.psfhosted.org"
+  conveyor_address = "test-conveyor.ingress.us-east-2.pypi.io"
 
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
