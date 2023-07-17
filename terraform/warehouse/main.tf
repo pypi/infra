@@ -84,11 +84,11 @@ resource "fastly_service_vcl" "pypi" {
     method = "GET"
     path   = "/_health/"
 
-    check_interval = 6000
-    timeout        = 4000
-    threshold      = 2
-    initial        = 2
-    window         = 4
+    check_interval = 15000
+    timeout        = 5000
+    threshold      = 3
+    initial        = 4
+    window         = 5
   }
 
   dictionary {
