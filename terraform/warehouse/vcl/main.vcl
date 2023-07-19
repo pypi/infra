@@ -2,6 +2,11 @@ sub vcl_recv {
     # Require authentication for curl -XPURGE requests.
     set req.http.Fastly-Purge-Requires-Auth = "1";
 
+    # Disallow client provided Fastly-Client-IP headers
+    if (fastly.ff.visits_this_service == 0 && req.restarts == 0) {
+      set req.http.Fastly-Client-IP = client.ip;
+    }
+
     declare local var.Warehouse-Ip-Salt STRING;
 
     # Prevent edge from caching stale content served from shield
