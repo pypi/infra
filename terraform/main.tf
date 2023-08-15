@@ -220,6 +220,17 @@ module "test-docs-hosting" {
   domain_map       = local.domain_map
 }
 
+module "test-pypi-camo" {
+  source "./image_proxy/test-pypi"
+
+  sitename         = "Test PyPI Camo"
+  zone_id          = module.dns.user_content_zone_id
+  domain           = "testpypi-image-proxy.global.ssl.fastly.net"
+  camo_address     = "warehouse-test-camo.ingress.us-east-2.pypi.io"
+
+  fastly_endpoints = local.fastly_endpoints
+  domain_map       = local.domain_map
+}
 
 output "nameservers" { value = module.dns.nameservers }
 output "pypi-ses_delivery_topic" { value = module.email.delivery_topic }
