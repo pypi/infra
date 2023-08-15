@@ -1,9 +1,9 @@
-resource "fastly_service_vcl" "Test PyPI Camo" {
-  name = Test PyPI Camo
+resource "fastly_service_vcl" "test-pypi-camo" {
+  name = var.fastly_service_name
 
   domain {
-    name    = "testpypi-image-proxy.global.ssl.fastly.net"
-    comment = "Test PyPI Camo"
+    name    = var.domain
+    comment = "test-pypi-camo"
   }
 
   backend {
