@@ -225,7 +225,7 @@ module "test-pypi-camo" {
 
   sitename             = "Test PyPI Camo"
   domain               = "testpypi-camo.global.ssl.fastly.net"
-  conveyor_address     = "warehouse-test-camo.ingress.us-east-2.pypi.io"
+  backend_address      = "warehouse-test-camo.ingress.us-east-2.pypi.io"
 }
 
 output "nameservers" { value = module.dns.nameservers }
