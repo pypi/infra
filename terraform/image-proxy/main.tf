@@ -22,7 +22,7 @@ resource "fastly_service_vcl" "camo" {
     action      = "set"
     destination = "http.Strict-Transport-Security"
     type        = "response"
-    source      = "max-age=300"
+    source      = "'max-age=300'"
   }
   request_setting {
     name      = "force tls"
