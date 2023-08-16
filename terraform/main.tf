@@ -224,7 +224,7 @@ module "test-pypi-camo" {
   source = "./image-proxy"
 
   sitename             = "Test PyPI Camo"
-  domain               = "testpypi-image-proxy.global.ssl.fastly.net"
+  domain               = "testpypi-camo.global.ssl.fastly.net"
   conveyor_address     = "warehouse-test-camo.ingress.us-east-2.pypi.io"
 }
 
