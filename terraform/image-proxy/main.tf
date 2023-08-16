@@ -3,7 +3,7 @@ variable "sitename" { type = string }
 variable "conveyor_address" { type = string }
 
 
-resource "fastly_service_vcl" "test-pypi-camo" {
+resource "fastly_service_vcl" "camo" {
   name = var.sitename
 
   domain {
