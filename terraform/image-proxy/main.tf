@@ -4,7 +4,8 @@ variable "backend_address" { type = string }
 
 
 resource "fastly_service_vcl" "camo" {
-  name = var.sitename
+  name        = var.sitename
+  default_ttl = 10
 
   domain {
     name = var.domain
