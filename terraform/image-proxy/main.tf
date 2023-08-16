@@ -16,6 +16,7 @@ resource "fastly_service_vcl" "camo" {
     port    = 443
     ssl_cert_hostname = var.backend_address
     ssl_sni_hostname  = var.backend_address
+    use_ssl = true
   }
   header {
     name        = "force tls"
