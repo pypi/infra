@@ -17,5 +17,16 @@ resource "fastly_service_vcl" "camo" {
     ssl_cert_hostname = var.backend_address
     ssl_sni_hostname  = var.backend_address
   }
+  header {
+    name        = "force tls"
+    action      = "set"
+    destination = "http.Strict-Transport-Security"
+    type        = "response"
+    source      = "max-age=300"
+  }
+  request_setting {
+    name      = "force tls"
+    force_ssl = true
+  }
 }
   
