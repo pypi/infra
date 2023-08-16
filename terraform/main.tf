@@ -224,12 +224,8 @@ module "test-pypi-camo" {
   source = "./image-proxy"
 
   sitename             = "Test PyPI Camo"
-#  zone_id              = module.dns.user_content_zone_id
   domain               = "testpypi-image-proxy.global.ssl.fastly.net"
   conveyor_address     = "warehouse-test-camo.ingress.us-east-2.pypi.io"
-
-#  fastly_endpoints     = local.fastly_endpoints
-#  domain_map           = local.domain_map
 }
 
 output "nameservers" { value = module.dns.nameservers }
