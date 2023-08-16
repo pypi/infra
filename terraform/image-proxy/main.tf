@@ -17,6 +17,7 @@ resource "fastly_service_vcl" "camo" {
     ssl_cert_hostname = var.backend_address
     ssl_sni_hostname  = var.backend_address
     use_ssl = true
+    override_host     = var.backend_address
   }
   header {
     name        = "force tls"
