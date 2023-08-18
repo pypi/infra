@@ -8,8 +8,8 @@ terraform {
 }
 
 provider "aws" {
-  alias   = "email"
-  region  = "us-west-2"
+  alias  = "email"
+  region = "us-west-2"
 }
 
 variable "name" { type = string }
@@ -90,9 +90,10 @@ resource "aws_route53_record" "primary_amazonses_spf_record" {
 
 
 resource "aws_sns_topic" "delivery-events" {
-  provider     = aws.email
-  name         = "${var.name}-ses-delivery-events-topic"
-  display_name = "${var.display_name} SES Delivery Events"
+  provider          = aws.email
+  name              = "${var.name}-ses-delivery-events-topic"
+  display_name      = "${var.display_name} SES Delivery Events"
+  signature_version = 2
 
   delivery_policy = <<EOF
 {
