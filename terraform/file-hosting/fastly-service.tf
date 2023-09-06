@@ -69,7 +69,7 @@ resource "fastly_service_vcl" "files" {
     ssl_sni_hostname = "${var.files_bucket}.s3.us-east-005.backblazeb2.com"
 
     connect_timeout       = 2000
-    first_byte_timeout    = 200
+    first_byte_timeout    = 2000
     between_bytes_timeout = 3000
     error_threshold       = 5
   }
