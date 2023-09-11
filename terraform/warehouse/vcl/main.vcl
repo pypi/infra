@@ -478,41 +478,7 @@ sub vcl_deliver {
     set resp.http.X-Permitted-Cross-Domain-Policies = "none";
 
     # See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy
-    set resp.http.Permissions-Policy = {"
-        publickey-credentials-create=(self),
-        publickey-credentials-get=(self),
-        accelerometer=(),
-        ambient-light-sensor=(),
-        autoplay=(),
-        battery=(),
-        camera=(),
-        display-capture=(),
-        document-domain=(),
-        encrypted-media=(),
-        execution-while-not-rendered=(),
-        execution-while-out-of-viewport=(),
-        fullscreen=(),
-        gamepad=(),
-        geolocation=(),
-        gyroscope=(),
-        hid=(),
-        identity-credentials-get=(),
-        idle-detection=(),
-        local-fonts=(),
-        magnetometer=(),
-        microphone=(),
-        midi=(),
-        otp-credentials=(),
-        payment=(),
-        picture-in-picture=(),
-        screen-wake-lock=(),
-        serial=(),
-        speaker-selection=(),
-        storage-access=(),
-        usb=(),
-        web-share=(),
-        xr-spatial-tracking=()
-    ";}
+    set resp.http.Permissions-Policy = {"publickey-credentials-create=(self),publickey-credentials-get=(self),accelerometer=(),ambient-light-sensor=(),autoplay=(),battery=(),camera=(),display-capture=(),document-domain=(),encrypted-media=(),execution-while-not-rendered=(),execution-while-out-of-viewport=(),fullscreen=(),gamepad=(),geolocation=(),gyroscope=(),hid=(),identity-credentials-get=(),idle-detection=(),local-fonts=(),magnetometer=(),microphone=(),midi=(),otp-credentials=(),payment=(),picture-in-picture=(),screen-wake-lock=(),serial=(),speaker-selection=(),storage-access=(),usb=(),web-share=(),xr-spatial-tracking=()";}
 
     return(deliver);
 }
