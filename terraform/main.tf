@@ -11,12 +11,6 @@ locals {
 
 locals {
   fastly_endpoints = {
-    "r.ssl.fastly.net_A"            = ["151.101.1.63", "151.101.65.63", "151.101.129.63", "151.101.193.63"]
-    "r.ssl.fastly.net_AAAA"         = ["2a04:4e42::319", "2a04:4e42:200::319", "2a04:4e42:400::319", "2a04:4e42:600::319"]
-    "r.ssl.fastly.net_CNAME"        = ["dualstack.r.ssl.global.fastly.net"]
-    "m.sni.global.fastly.net_A"     = ["151.101.1.55", "151.101.65.55", "151.101.129.55", "151.101.193.55"]
-    "m.sni.global.fastly.net_AAAA"  = ["2a04:4e42::311", "2a04:4e42:200::311", "2a04:4e42:400::311", "2a04:4e42:600::311"]
-    "m.sni.global.fastly.net_CNAME" = ["dualstack.m.sni.global.fastly.net"]
     "python.map.fastly.net_A"       = ["151.101.128.223", "151.101.192.223", "151.101.0.223", "151.101.64.223"]
     "python.map.fastly.net_AAAA"    = ["2a04:4e42:200::223", "2a04:4e42:400::223", "2a04:4e42:600::223", "2a04:4e42::223"]
     "python.map.fastly.net_CNAME"   = ["dualstack.python.map.fastly.net"]
@@ -24,10 +18,10 @@ locals {
   domain_map = {
     "pypi.org"                       = "python.map.fastly.net"
     "test.pypi.org"                  = "python.map.fastly.net"
-    "pythonhosted.org"               = "m.sni.global.fastly.net"
-    "test.pythonhosted.org"          = "m.sni.global.fastly.net"
-    "files.pythonhosted.org"         = "m.sni.global.fastly.net"
-    "test-files.pythonhosted.org"    = "m.sni.global.fastly.net"
+    "pythonhosted.org"               = "python.map.fastly.net"
+    "test.pythonhosted.org"          = "python.map.fastly.net"
+    "files.pythonhosted.org"         = "python.map.fastly.net"
+    "test-files.pythonhosted.org"    = "python.map.fastly.net"
   }
 }
 
