@@ -69,10 +69,7 @@ sub vcl_recv {
         set req.backend = F_S3_Archive;
       }
 
-      if (req.http.X-Bypass-Cache) {
-        return(pass);
-      }
-      return(lookup);
+      return(pass);
     }
 
     # Check if our request was restarted for a package URL due to a 404,
