@@ -38,6 +38,15 @@ resource "fastly_service_vcl" "files" {
     content  = "set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};"
   }
 
+  snippet {
+    name     = "X-PyPI-Admin"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.X-PyPI-Admin = "${var.x_pypi_admin_token}";
+    EOT
+  }
+
   backend {
     name             = "Conveyor"
     auto_loadbalance = true

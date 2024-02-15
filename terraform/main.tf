@@ -144,6 +144,7 @@ module "file-hosting" {
   files_bucket        = "pypi-files"
   s3_logging_keys     = var.fastly_s3_logging
   datadog_token       = var.datadog_token
+  x_pypi_admin_token  = var.x_pypi_admin_token
 
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
@@ -172,6 +173,7 @@ module "test-file-hosting" {
   files_bucket        = "pypi-files-staging"
   s3_logging_keys     = var.fastly_s3_logging
   datadog_token       = var.datadog_token
+  x_pypi_admin_token  = var.x_pypi_admin_token
 
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key

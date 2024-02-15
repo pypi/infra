@@ -1,4 +1,6 @@
 sub vcl_recv {
+    declare local var.X-PyPI-Admin STRING;
+
     # Require authentication for curl -XPURGE requests, required for Segmented Caching
     set req.http.Fastly-Purge-Requires-Auth = "1";
 
@@ -57,11 +59,29 @@ sub vcl_recv {
         error 604 "SNI is required";
     }
 
+    # Admin Bypass! This is authenticated via a shared secret and allows an admin to
+    # force a backend and optionally bypass the cache
+    if (req.http.X-PyPI-Admin == var.X-PyPI-Admin) {
+      if (req.http.X-Force-Backend == "PRIMARY") {
+        set req.backend = F_B2;
+      }
+      if (req.http.X-Force-Backend == "ARCHIVE") {
+        set req.backend = F_S3_Archive;
+      }
+
+      if (req.http.X-Bypass-Cache) {
+        return(pass);
+      }
+      return(lookup);
+    }
+
     # Check if our request was restarted for a package URL due to a 404,
     # Change our backend to S3 Archive to look for the file there, re-enable clustering and continue
     # https://www.slideshare.net/Fastly/advanced-vcl-how-to-use-restart
     if (req.restarts > 0 && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
       set req.backend = F_S3_Archive;
+      # Re-enable clustering since a restart has occurred
+      # https://www.fastly.com/documentation/reference/http/http-headers/Fastly-Force-Shield/
       set req.http.Fastly-Force-Shield = "1";
       set req.http.Fallback-Backend = "1";
     }

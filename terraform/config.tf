@@ -42,6 +42,10 @@ variable "datadog_token" {
   type      = string
   sensitive = true
 }
+variable "x_pypi_admin_token" {
+  type      = string
+  sensitive = true
+}
 
 terraform {
   cloud {
