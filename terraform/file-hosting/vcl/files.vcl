@@ -68,7 +68,6 @@ sub vcl_recv {
       if (req.http.X-Force-Backend == "ARCHIVE") {
         set req.backend = F_S3_Archive;
       }
-
       return(pass);
     }
 
@@ -238,6 +237,134 @@ sub vcl_miss {
   declare local var.scope STRING;
 
 #FASTLY miss
+
+  if (req.backend == F_S3_Archive) {
+      set bereq.http.x-amz-content-sha256 = digest.hash_sha256("");
+      set bereq.http.x-amz-date = strftime({"%Y%m%dT%H%M%SZ"}, now);
+      set bereq.http.host = var.AWSArchiveBucket ".s3." var.AWSArchiveRegion ".amazonaws.com";
+      set bereq.url = querystring.remove(bereq.url);
+      set bereq.url = regsuball(bereq.url, "\+", urlencode("+"));
+      set bereq.url = regsuball(urlencode(urldecode(bereq.url.path)), {"%2F"}, "/");
+      set var.dateStamp = strftime({"%Y%m%d"}, now);
+      set var.canonicalHeaders = ""
+        "host:" bereq.http.host LF
+        "x-amz-content-sha256:" bereq.http.x-amz-content-sha256 LF
+        "x-amz-date:" bereq.http.x-amz-date LF
+      ;
+      set var.canonicalQuery = "";
+      set var.signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+      set var.canonicalRequest = ""
+        "GET" LF
+        bereq.url.path LF
+        var.canonicalQuery LF
+        var.canonicalHeaders LF
+        var.signedHeaders LF
+        digest.hash_sha256("")
+      ;
+
+      set var.scope = var.dateStamp "/" var.AWSArchiveRegion "/s3/aws4_request";
+
+      set var.stringToSign = ""
+        "AWS4-HMAC-SHA256" LF
+        bereq.http.x-amz-date LF
+        var.scope LF
+        regsub(digest.hash_sha256(var.canonicalRequest),"^0x", "")
+      ;
+
+      set var.signature = digest.awsv4_hmac(
+        var.AWSArchiveSecretAccessKey,
+        var.dateStamp,
+        var.AWSArchiveRegion,
+        "s3",
+        var.stringToSign
+      );
+
+      set bereq.http.Authorization = "AWS4-HMAC-SHA256 "
+        "Credential=" var.AWSArchiveAccessKeyID "/" var.scope ", "
+        "SignedHeaders=" var.signedHeaders ", "
+        "Signature=" + regsub(var.signature,"^0x", "")
+      ;
+      unset bereq.http.Accept;
+      unset bereq.http.Accept-Language;
+      unset bereq.http.User-Agent;
+      unset bereq.http.Fastly-Client-IP;
+  }
+
+  if (req.backend == F_B2) {
+      set bereq.http.x-amz-content-sha256 = digest.hash_sha256("");
+      set bereq.http.x-amz-date = strftime({"%Y%m%dT%H%M%SZ"}, now);
+      set bereq.http.host = var.B2Bucket ".s3." var.B2Region ".backblazeb2.com";
+      set bereq.url = querystring.remove(bereq.url);
+      set bereq.url = regsuball(bereq.url, "\+", urlencode("+"));
+      set bereq.url = regsuball(urlencode(urldecode(bereq.url.path)), {"%2F"}, "/");
+      set var.dateStamp = strftime({"%Y%m%d"}, now);
+      set var.canonicalHeaders = ""
+        "host:" bereq.http.host LF
+        "x-amz-content-sha256:" bereq.http.x-amz-content-sha256 LF
+        "x-amz-date:" bereq.http.x-amz-date LF
+      ;
+      set var.canonicalQuery = "";
+      set var.signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+      set var.canonicalRequest = ""
+        "GET" LF
+        bereq.url.path LF
+        var.canonicalQuery LF
+        var.canonicalHeaders LF
+        var.signedHeaders LF
+        digest.hash_sha256("")
+      ;
+
+      set var.scope = var.dateStamp "/" var.B2Region "/s3/aws4_request";
+
+      set var.stringToSign = ""
+        "AWS4-HMAC-SHA256" LF
+        bereq.http.x-amz-date LF
+        var.scope LF
+        regsub(digest.hash_sha256(var.canonicalRequest),"^0x", "")
+      ;
+
+      set var.signature = digest.awsv4_hmac(
+        var.B2SecretKey,
+        var.dateStamp,
+        var.B2Region,
+        "s3",
+        var.stringToSign
+      );
+
+      set bereq.http.Authorization = "AWS4-HMAC-SHA256 "
+        "Credential=" var.B2AccessKey "/" var.scope ", "
+        "SignedHeaders=" var.signedHeaders ", "
+        "Signature=" + regsub(var.signature,"^0x", "")
+      ;
+      unset bereq.http.Accept;
+      unset bereq.http.Accept-Language;
+      unset bereq.http.User-Agent;
+      unset bereq.http.Fastly-Client-IP;
+  }
+
+}
+
+sub vcl_pass {
+  declare local var.B2AccessKey STRING;
+  declare local var.B2SecretKey STRING;
+  declare local var.B2Bucket STRING;
+  declare local var.B2Region STRING;
+
+  declare local var.AWSArchiveAccessKeyID STRING;
+  declare local var.AWSArchiveSecretAccessKey STRING;
+  declare local var.AWSArchiveBucket STRING;
+  declare local var.AWSArchiveRegion STRING;
+
+  declare local var.canonicalHeaders STRING;
+  declare local var.signedHeaders STRING;
+  declare local var.canonicalRequest STRING;
+  declare local var.canonicalQuery STRING;
+  declare local var.stringToSign STRING;
+  declare local var.dateStamp STRING;
+  declare local var.signature STRING;
+  declare local var.scope STRING;
+
+#FASTLY pass
 
   if (req.backend == F_S3_Archive) {
       set bereq.http.x-amz-content-sha256 = digest.hash_sha256("");

@@ -32,6 +32,30 @@ resource "fastly_service_vcl" "files" {
   }
 
   snippet {
+    name     = "B2-pass"
+    priority = 100
+    type     = "pass"
+    content  = <<-EOT
+        set var.B2AccessKey = "${b2_application_key.primary_storage_read_key_backblaze.application_key_id}";
+        set var.B2SecretKey = "${b2_application_key.primary_storage_read_key_backblaze.application_key}";
+        set var.B2Bucket    = "${var.files_bucket}";
+        set var.B2Region = "us-east-005";
+    EOT
+  }
+
+  snippet {
+    name     = "AWS-Archive-pass"
+    priority = 100
+    type     = "pass"
+    content  = <<-EOT
+        set var.AWSArchiveAccessKeyID = "${aws_iam_access_key.archive_storage_access_key.id}";
+        set var.AWSArchiveSecretAccessKey = "${aws_iam_access_key.archive_storage_access_key.secret}";
+        set var.AWSArchiveBucket = "${aws_s3_bucket.archive_storage_glacier_bucket.id}";
+        set var.AWSArchiveRegion = "${aws_s3_bucket.archive_storage_glacier_bucket.region}";
+    EOT
+  }
+
+  snippet {
     name     = "Linehaul"
     priority = 100
     type     = "log"
