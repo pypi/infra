@@ -58,19 +58,19 @@ terraform {
 
 
 provider "aws" {
-  alias   = "us-east-2"
-  region  = "us-east-2"
+  alias  = "us-east-2"
+  region = "us-east-2"
 }
 
 
 provider "aws" {
-  alias   = "us-west-2"
-  region  = "us-west-2"
+  alias  = "us-west-2"
+  region = "us-west-2"
 }
 
 provider "aws" {
-  alias   = "email"
-  region  = "us-west-2"
+  alias  = "email"
+  region = "us-west-2"
 }
 
 
