@@ -8,6 +8,7 @@ variable "linehaul_enabled" { type = bool }
 variable "linehaul_gcs" { type = map(any) }
 variable "warehouse_token" { type = string }
 variable "warehouse_ip_salt" { type = string }
+variable "fastly_toppops_enabled" { type = bool }
 
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
@@ -56,6 +57,23 @@ resource "fastly_service_vcl" "pypi" {
         declare local var.Ship-Logs-To-Line-Haul BOOL;
         set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};
     EOT
+  }
+
+  snippet {
+    name     = "Fastly Top POPs"
+    priority = 100
+    type     = "log"
+    content  = <<-EOT
+        declare local var.Ship-Logs-To-Fastly-Toppops BOOL;
+        set var.Ship-Logs-To-Fastly-Toppops = ${var.fastly_toppops_enabled};
+    EOT
+  }
+
+  snippet {
+    name     = "Fastly-Top-POPS"
+    priority = 100
+    type     = "init"
+    content  = file("${path.module}/vcl/fastly_top_pops.snippet.vcl")
   }
 
   backend {
@@ -160,6 +178,17 @@ resource "fastly_service_vcl" "pypi" {
     secret_key = var.linehaul_gcs["private_key"]
 
     response_condition = "Linehaul Log"
+  }
+
+  logging_https {
+    name           = "toppops-collector"
+    url            = "https://toppops-ingest.fastlylabs.com/ingest"
+    message_type   = "blank"
+    format_version = 2
+    format         = ""
+    content_type   = "text/plain"
+    method         = "POST"
+    placement      = "none"
   }
 
   response_object {

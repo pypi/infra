@@ -105,6 +105,8 @@ module "pypi" {
     private_key = "${var.linehaul_gcs_private_key}"
   }
 
+  fastly_toppops_enabled = true
+
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
 }
@@ -129,6 +131,8 @@ module "test-pypi" {
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
   }
+
+  fastly_toppops_enabled = false
 
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
@@ -158,6 +162,8 @@ module "file-hosting" {
     private_key = "${var.linehaul_gcs_private_key}"
   }
 
+  fastly_toppops_enabled = true
+
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
 }
@@ -186,6 +192,8 @@ module "test-file-hosting" {
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
   }
+
+  fastly_toppops_enabled = false
 
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
