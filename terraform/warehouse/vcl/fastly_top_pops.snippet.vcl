@@ -12,10 +12,7 @@ table toppops_config {
 # This is likely a second declaration of vcl_log which is fine,
 # Fastly will execute them in turn as if they are one subroutine.
 sub vcl_log {
-  declare local var.Ship-Logs-To-Line-Haul BOOL;
-  set var.Ship-Logs-To-Line-Haul = ${fastly_toppops_enabled};
-
-  if (var.Ship-Logs-To-Fastly-Toppops) {
+  if (${fastly_toppops_enabled}) {
     declare local var.dcpattern STRING;
     declare local var.thisdc STRING;
     set var.dcpattern = "," regsuball(table.lookup(toppops_config, "datacenters"), "\s", "") ",";
