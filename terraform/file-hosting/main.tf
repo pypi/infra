@@ -12,6 +12,7 @@ variable "gcs_access_key_id" { type = string }
 variable "gcs_secret_access_key" { type = string }
 variable "datadog_token" { type = string }
 variable "x_pypi_admin_token" { type = string }
+variable "fastly_toppops_enabled" { type = bool }
 
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }

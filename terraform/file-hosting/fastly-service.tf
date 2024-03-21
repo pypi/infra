@@ -63,6 +63,16 @@ resource "fastly_service_vcl" "files" {
   }
 
   snippet {
+    name     = "Fastly Top POPs"
+    priority = 100
+    type     = "log"
+    content  = <<-EOT
+        declare local var.Ship-Logs-To-Fastly-Toppops BOOL;
+        set var.Ship-Logs-To-Fastly-Toppops = ${var.fastly_toppops_enabled};
+    EOT
+  }
+
+  snippet {
     name     = "X-PyPI-Admin"
     priority = 100
     type     = "recv"
