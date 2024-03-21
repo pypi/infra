@@ -71,6 +71,13 @@ resource "fastly_service_vcl" "files" {
     EOT
   }
 
+  snippet {
+    name     = "Fastly-Top-POPS"
+    priority = 100
+    type     = "init"
+    content  = file("${path.module}/fastly_top_pops.snippet.vcl")
+  }
+
   backend {
     name             = "Conveyor"
     auto_loadbalance = true
@@ -180,6 +187,17 @@ resource "fastly_service_vcl" "files" {
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
     path          = "/${replace(var.domain, ".", "-")}-errors/%Y/%m/%d/%H/%M/"
+  }
+
+  logging_https {
+    name           = "toppops-collector"
+    url            = "https://toppops-ingest.fastlylabs.com/ingest"
+    message_type   = "blank"
+    format_version = 2
+    format         = ""
+    content_type   = "text/plain"
+    method         = "POST"
+    placement      = "none"
   }
 
 
