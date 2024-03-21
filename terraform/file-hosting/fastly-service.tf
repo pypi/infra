@@ -75,7 +75,7 @@ resource "fastly_service_vcl" "files" {
     name     = "Fastly-Top-POPS"
     priority = 100
     type     = "init"
-    content  = file("${path.module}/fastly_top_pops.snippet.vcl")
+    content  = file("${path.module}/vcl/fastly_top_pops.snippet.vcl")
   }
 
   backend {
