@@ -6,13 +6,13 @@
 
 table toppops_config {
   "datacenters": "ACC, AKL, BOG, CHI, EXE, FJR, HEL, JNB, LGB, MAD, PER, QPG, TYO",
-  "sample_percent": "1"
+  "sample_percent": "3"
 }
 
 # This is likely a second declaration of vcl_log which is fine,
 # Fastly will execute them in turn as if they are one subroutine.
 sub vcl_log {
-  if (${fastly_toppops_enabled}) {
+  if (${fastly_toppops_enabled} && fastly.ff.visits_this_service == 0) {
     declare local var.dcpattern STRING;
     declare local var.thisdc STRING;
     set var.dcpattern = "," regsuball(table.lookup(toppops_config, "datacenters"), "\s", "") ",";
