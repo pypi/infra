@@ -121,7 +121,8 @@ sub vcl_recv {
     #   * /accounts/search/
     #   * /pypi
     #   * /project/<project name>/submit-malware-report/
-    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|accounts/search/|pypi|project/[^/]+/submit-malware-report/)") {
+    #   * /manage/project/<project name>/settings/publishing/
+    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|accounts/search/|pypi|project/[^/]+/submit-malware-report/|/manage/project/[^/]+/settings/publishing/)") {
         set req.url = req.url.path;
     }
 
