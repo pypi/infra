@@ -576,17 +576,22 @@ sub vcl_error {
     } else if (obj.status == 665) {
         set obj.status = 200;
         set obj.http.Content-Type = "text/xml; charset=UTF-8";
-        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC list_packages method. Use JSON or Simple API instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC list_packages method. Use JSON or Simple API instead. See https://github.com/pypi/warehouse/issues/16642 and https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
         return (deliver);
     } else if (obj.status == 667) {
         set obj.status = 200;
         set obj.http.Content-Type = "text/xml; charset=UTF-8";
-        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC package_releases method. Use JSON or Simple API instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC package_releases method. Use JSON or Simple API instead. See https://github.com/pypi/warehouse/issues/16642 and https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
         return (deliver);
     } else if (obj.status == 668) {
         set obj.status = 200;
         set obj.http.Content-Type = "text/xml; charset=UTF-8";
-        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC package_releases method. Use JSON or Simple API instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC package_releases method. Use JSON or Simple API instead. See https://github.com/pypi/warehouse/issues/16642 and https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        return (deliver);
+    } else if (obj.status == 669) {
+        set obj.status = 200;
+        set obj.http.Content-Type = "text/xml; charset=UTF-8";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC release_data method. Use JSON or Simple API instead. See https://github.com/pypi/warehouse/issues/16642 and https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
         return (deliver);
     } else if (obj.status == 670) {
         set obj.status = 406;
