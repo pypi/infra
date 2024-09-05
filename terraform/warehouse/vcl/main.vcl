@@ -249,49 +249,25 @@ sub vcl_recv {
         req.body ~ "<methodName>search</methodName>") {
             error 666 "Disable XMLRPC search method";
     }
-    # Rolling blackout of newly deprecated methods
-    if (!req.http.Fastly-FF) {
-
-        declare local var.deprecated_xmlrpc BOOL;
-        if (time.is_after(now, std.time("2024-09-26 12:00:00", std.integer2time(-1)))) {
-            set var.deprecated_xmlrpc = true;
-        } else if (time.is_after(now, std.time("2024-09-19 12:00:00", std.integer2time(-1)))) {
-            if ((std.atoi(strftime({"%M"}, now)) < 21) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 51))) {
-                set var.deprecated_xmlrpc = true;
-            }
-        } else if (time.is_after(now, std.time("2024-09-12 12:00:00", std.integer2time(-1)))) {
-            if ((std.atoi(strftime({"%M"}, now)) < 16) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 41))) {
-                set var.deprecated_xmlrpc = true;
-            }
-        } else if (time.is_after(now, std.time("2024-09-05 12:00:00", std.integer2time(-1)))) {
-            if (std.atoi(strftime({"%M"}, now)) < 11) {
-                set var.deprecated_xmlrpc = true;
-            }
-        }
-
-        if (var.deprecated_xmlrpc) {
-            if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
-                req.http.Content-Type ~ "text/xml" &&
-                req.body ~ "<methodName>list_packages</methodName>") {
-                    error 665 "Disable XMLRPC list_packages method";
-            }
-            if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
-                req.http.Content-Type ~ "text/xml" &&
-                req.body ~ "<methodName>package_releases</methodName>") {
-                    error 667 "Disable XMLRPC package_releases method";
-            }
-            if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
-                req.http.Content-Type ~ "text/xml" &&
-                req.body ~ "<methodName>release_urls</methodName>") {
-                    error 668 "Disable XMLRPC release_urls method";
-            }
-            if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
-                req.http.Content-Type ~ "text/xml" &&
-                req.body ~ "<methodName>release_data</methodName>") {
-                    error 669 "Disable XMLRPC release_data method";
-            }
-        }
-
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>list_packages</methodName>") {
+            error 665 "Disable XMLRPC list_packages method";
+    }
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>package_releases</methodName>") {
+            error 667 "Disable XMLRPC package_releases method";
+    }
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>release_urls</methodName>") {
+            error 668 "Disable XMLRPC release_urls method";
+    }
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>release_data</methodName>") {
+            error 669 "Disable XMLRPC release_data method";
     }
 
     # We need to redirect all of the existing domain names to the new domain name,
