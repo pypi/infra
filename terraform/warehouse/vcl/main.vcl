@@ -255,7 +255,7 @@ sub vcl_recv {
         declare local var.deprecated_xmlrpc BOOL;
         if (time.is_after(now, std.time("2024-09-26 12:00:00", std.integer2time(-1)))) {
             set var.deprecated_xmlrpc = true;
-        } else if (time.is_after(now, std.time("2021-09-19 12:00:00", std.integer2time(-1)))) {
+        } else if (time.is_after(now, std.time("2024-09-19 12:00:00", std.integer2time(-1)))) {
             if ((std.atoi(strftime({"%M"}, now)) < 21) || ((std.atoi(strftime({"%M"}, now)) > 29) && (std.atoi(strftime({"%M"}, now)) < 51))) {
                 set var.deprecated_xmlrpc = true;
             }
