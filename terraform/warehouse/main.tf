@@ -22,7 +22,7 @@ locals {
 resource "fastly_service_vcl" "pypi" {
   name     = var.name
   # Set to false for spicy changes
-  activate = true
+  activate = false
 
   domain { name = var.domain }
 
