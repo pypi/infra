@@ -15,7 +15,7 @@ variable "domain_map" { type = map(any) }
 
 variable "ngwaf_site_name" { type = string }
 variable "ngwaf_email" { type = string }
-variable "ngwaf_token" { type = string , sensitive = true }
+variable "ngwaf_token" { type = string }
 variable "activate_ngwaf_service" { type = bool }
 variable "edge_security_dictionary" { type = string }
 
