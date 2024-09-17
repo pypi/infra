@@ -48,33 +48,6 @@ variable "x_pypi_admin_token" {
 }
 
 ## NGWAF
-variable "activate_ngwaf_service" {
-  type        = bool
-  description = "Whether to activate the NGWAF service."
-}
-variable "edge_security_dictionary" {
-  type        = string
-  description = "The dictionary name for the Edge Security product."
-  default     = "Edge_Security"
-}
-variable "ngwaf_corp_name" {
-  type        = string
-  description = "Corp name for NGWAF"
-  default     = "python"
-}
-variable "ngwaf_site_name" {
-  type        = string
-  description = "Site SHORT name for NGWAF"
-
-  validation {
-    condition     = can(regex("^(pypi-test|pypi-prod)$", var.ngwaf_site_name))
-    error_message = "'ngwaf_site_name' must be one of the following: pypi-test, or pypiprod"
-  }
-}
-variable "ngwaf_email" {
-  type        = string
-  description = "Email address associated with the token for the NGWAF API."
-}
 variable "ngwaf_token" {
   type        = string
   description = "Secret token for the NGWAF API."
