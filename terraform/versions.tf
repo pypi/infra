@@ -8,6 +8,10 @@ terraform {
       source  = "fastly/fastly"
       version = "1.1.2"
     }
+    sigsci = {
+      source  = "signalsciences/sigsci"
+      version = "3.3.0"
+    }
   }
   required_version = ">= 1.1.8"
 }
