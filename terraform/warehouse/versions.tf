@@ -4,7 +4,7 @@ terraform {
       source = "hashicorp/aws"
     }
     fastly = {
-      source = "fastly/fastly"
+      source  = "fastly/fastly"
       version = ">= 5.13.0"
     }
     sigsci = {

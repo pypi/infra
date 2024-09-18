@@ -1,8 +1,8 @@
 provider "sigsci" {
   # if i dont add this it errors: Provider configuration not present
-  alias = "firewall"
-  corp = "python"
-  email = "infrastructure-staff@python.org"
+  alias      = "firewall"
+  corp       = "python"
+  email      = "infrastructure-staff@python.org"
   auth_token = var.ngwaf_token
 }
 

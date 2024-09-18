@@ -111,10 +111,10 @@ module "pypi" {
   domain_map       = local.domain_map
 
   # NGWAF
-  ngwaf_site_name        = "pypi-prod"
-  ngwaf_email            = "infrastructure-staff@python.org"
-  ngwaf_token            = var.ngwaf_token
-  activate_ngwaf_service = false
+  ngwaf_site_name          = "pypi-prod"
+  ngwaf_email              = "infrastructure-staff@python.org"
+  ngwaf_token              = var.ngwaf_token
+  activate_ngwaf_service   = false
   edge_security_dictionary = "Edge_Security"
 }
 
@@ -145,10 +145,10 @@ module "test-pypi" {
   domain_map       = local.domain_map
 
   # NGWAF
-  ngwaf_site_name        = "pypi-test"
-  ngwaf_email            = "infrastructure-staff@python.org"
-  ngwaf_token            = var.ngwaf_token
-  activate_ngwaf_service = true
+  ngwaf_site_name          = "pypi-test"
+  ngwaf_email              = "infrastructure-staff@python.org"
+  ngwaf_token              = var.ngwaf_token
+  activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
 }
 

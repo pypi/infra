@@ -237,7 +237,7 @@ resource "fastly_service_vcl" "pypi" {
   dynamic "dictionary" {
     for_each = var.activate_ngwaf_service ? [1] : []
     content {
-      name = var.edge_security_dictionary
+      name          = var.edge_security_dictionary
       force_destroy = true
     }
   }
