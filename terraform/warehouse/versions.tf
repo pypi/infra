@@ -5,6 +5,7 @@ terraform {
     }
     fastly = {
       source = "fastly/fastly"
+      version = ">= 5.13.0"
     }
     sigsci = {
       source  = "signalsciences/sigsci"

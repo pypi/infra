@@ -87,8 +87,8 @@ provider "fastly" {
 
 provider "sigsci" {
   alias          = "firewall"
-  corp           = var.ngwaf_corp_name
-  email          = var.ngwaf_email
+  corp           = "python"
+  email          = "infrastructure-staff@python.org"
   auth_token     = var.ngwaf_token
   fastly_api_key = var.credentials["fastly"]
 }

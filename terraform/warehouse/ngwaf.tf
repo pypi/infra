@@ -1,3 +1,9 @@
+provider "sigsci" {
+  # if i dont add this it errors: Provider configuration not present
+  alias = "firewall"
+  corp = "python"
+  email = "infrastructure-staff@python.org"
+}
 
 resource "fastly_service_dictionary_items" "edge_security_dictionary_items" {
   count         = var.activate_ngwaf_service ? 1 : 0
