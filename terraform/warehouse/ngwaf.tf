@@ -3,6 +3,7 @@ provider "sigsci" {
   alias = "firewall"
   corp = "python"
   email = "infrastructure-staff@python.org"
+  auth_token = var.ngwaf_token
 }
 
 resource "fastly_service_dictionary_items" "edge_security_dictionary_items" {
