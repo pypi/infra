@@ -53,6 +53,11 @@ variable "ngwaf_token" {
   description = "Secret token for the NGWAF API."
   sensitive   = true
 }
+variable "ngwaf_email" {
+  type        = string
+  description = "Email address for the NGWAF API."
+  default     = "infrastructure-staff@python.org"
+}
 
 terraform {
   cloud {
@@ -88,7 +93,7 @@ provider "fastly" {
 provider "sigsci" {
   alias          = "firewall"
   corp           = "python"
-  email          = "infrastructure-staff@python.org"
+  email          = var.ngwaf_email
   auth_token     = var.ngwaf_token
   fastly_api_key = var.credentials["fastly"]
 }

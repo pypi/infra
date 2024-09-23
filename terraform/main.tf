@@ -112,7 +112,7 @@ module "pypi" {
 
   # NGWAF
   ngwaf_site_name          = "pypi-prod"
-  ngwaf_email              = "infrastructure-staff@python.org"
+  ngwaf_email              = var.ngwaf_email
   ngwaf_token              = var.ngwaf_token
   activate_ngwaf_service   = false
   edge_security_dictionary = "Edge_Security"
@@ -146,7 +146,7 @@ module "test-pypi" {
 
   # NGWAF
   ngwaf_site_name          = "pypi-test"
-  ngwaf_email              = "infrastructure-staff@python.org"
+  ngwaf_email              = var.ngwaf_email
   ngwaf_token              = var.ngwaf_token
   activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
