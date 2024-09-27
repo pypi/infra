@@ -4,6 +4,7 @@ provider "sigsci" {
   corp       = "python"
   email      = var.ngwaf_email
   auth_token = var.ngwaf_token
+  fastly_api_key = var.fastly_key
 }
 
 resource "fastly_service_dictionary_items" "edge_security_dictionary_items" {
