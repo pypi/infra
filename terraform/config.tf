@@ -47,6 +47,18 @@ variable "x_pypi_admin_token" {
   sensitive = true
 }
 
+## NGWAF
+variable "ngwaf_token" {
+  type        = string
+  description = "Secret token for the NGWAF API."
+  sensitive   = true
+}
+variable "ngwaf_email" {
+  type        = string
+  description = "Email address for the NGWAF API."
+  default     = "infrastructure-staff@python.org"
+}
+
 terraform {
   cloud {
     organization = "psf"
@@ -76,4 +88,12 @@ provider "aws" {
 
 provider "fastly" {
   api_key = var.credentials["fastly"]
+}
+
+provider "sigsci" {
+  alias          = "firewall"
+  corp           = "python"
+  email          = var.ngwaf_email
+  auth_token     = var.ngwaf_token
+  fastly_api_key = var.credentials["fastly"]
 }
