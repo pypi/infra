@@ -11,7 +11,7 @@ resource "fastly_service_dictionary_items" "edge_security_dictionary_items" {
   service_id    = fastly_service_vcl.pypi.id
   dictionary_id = one([for d in fastly_service_vcl.pypi.dictionary : d.dictionary_id if d.name == var.edge_security_dictionary])
   items = {
-    Enabled : "100"
+    Enabled : "50"
   }
 }
 
