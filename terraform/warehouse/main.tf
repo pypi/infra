@@ -18,6 +18,7 @@ variable "ngwaf_email" { type = string }
 variable "ngwaf_token" { type = string }
 variable "activate_ngwaf_service" { type = bool }
 variable "edge_security_dictionary" { type = string }
+variable "fastly_key" { type = string }
 
 
 locals {

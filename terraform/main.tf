@@ -150,6 +150,7 @@ module "test-pypi" {
   ngwaf_token              = var.ngwaf_token
   activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
+  fastly_key               = var.credentials["fastly"]
 }
 
 module "file-hosting" {
