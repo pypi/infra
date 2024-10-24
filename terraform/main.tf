@@ -114,9 +114,10 @@ module "pypi" {
   ngwaf_site_name          = "pypi-prod"
   ngwaf_email              = var.ngwaf_email
   ngwaf_token              = var.ngwaf_token
-  activate_ngwaf_service   = false
+  activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
   fastly_key               = var.credentials["fastly"]
+  ngwaf_percent_enabled    = 10
 }
 
 module "test-pypi" {
@@ -152,6 +153,7 @@ module "test-pypi" {
   activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
   fastly_key               = var.credentials["fastly"]
+  ngwaf_percent_enabled    = 100
 }
 
 module "file-hosting" {

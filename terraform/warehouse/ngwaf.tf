@@ -37,7 +37,7 @@ resource "sigsci_edge_deployment_service" "ngwaf_edge_service_link" {
   site_short_name  = var.ngwaf_site_name
   fastly_sid       = fastly_service_vcl.pypi.id
   activate_version = var.activate_ngwaf_service
-  percent_enabled  = 100
+  percent_enabled  = var.ngwaf_percent_enabled
   depends_on = [
     sigsci_edge_deployment.ngwaf_edge_site_service,
     fastly_service_vcl.pypi,
