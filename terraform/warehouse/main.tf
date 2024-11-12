@@ -20,6 +20,7 @@ variable "activate_ngwaf_service" { type = bool }
 variable "edge_security_dictionary" { type = string }
 variable "fastly_key" { type = string }
 variable "ngwaf_percent_enabled" { type = number }
+variable "datadog_token" { type = string }
 
 
 locals {
@@ -194,6 +195,13 @@ resource "fastly_service_vcl" "pypi" {
     placement      = "none"
   }
 
+  logging_datadog {
+    name               = "Log Edge Errors"
+    token              = var.datadog_token
+    response_condition = "Edge Error"
+    format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"url\": \"%%{json.escape(req.url)}V\", \"message\": \"Edge error occurred!\", \"short_message\": \"edge_error\" }"
+  }
+
   response_object {
     name              = "Bandersnatch User-Agent prohibited"
     status            = 403
@@ -233,6 +241,12 @@ resource "fastly_service_vcl" "pypi" {
     name      = "Never"
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
+  }
+
+  condition {
+    name      = "Edge Error"
+    type      = "RESPONSE"
+    statement = "(resp.status >= 500 && resp.status < 600)"
   }
 
   # NGWAF
