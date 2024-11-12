@@ -120,7 +120,8 @@ sub vcl_recv {
     #   * /account/webauthn-authenticate/
     #   * /accounts/search/
     #   * /pypi
-    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|accounts/search/|pypi)") {
+    #   * /project/<project name>/submit-malware-report/
+    if (req.url.path !~ "^/(admin/|locale/|manage/|search(/|$)|account/(login|logout|register|reset-password|verify-email|verify-organization-role|two-factor|webauthn-authenticate|recovery-code)/|accounts/search/|pypi|project/[^/]+/submit-malware-report/)") {
         set req.url = req.url.path;
     }
 
@@ -242,11 +243,31 @@ sub vcl_recv {
         error 604 "SNI is required";
     }
 
-    # Disable XMLRPC Search
+    # Deprecated XMLRPC Methods
     if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
         req.http.Content-Type ~ "text/xml" &&
         req.body ~ "<methodName>search</methodName>") {
-            error 667 "Disable XMLRPC Search";
+            error 666 "Disable XMLRPC search method";
+    }
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>list_packages</methodName>") {
+            error 665 "Disable XMLRPC list_packages method";
+    }
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>package_releases</methodName>") {
+            error 667 "Disable XMLRPC package_releases method";
+    }
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>release_urls</methodName>") {
+            error 668 "Disable XMLRPC release_urls method";
+    }
+    if ((req.url.path ~ "^/pypi$" || req.url.path ~ "^/pypi/$") &&
+        req.http.Content-Type ~ "text/xml" &&
+        req.body ~ "<methodName>release_data</methodName>") {
+            error 669 "Disable XMLRPC release_data method";
     }
 
     # We need to redirect all of the existing domain names to the new domain name,
@@ -282,10 +303,10 @@ sub vcl_recv {
     # There is some goofy tool that is slamming us with requests from go-http-client User-Agents
     # that causes redirect storms when it runs.
     if (req.http.User-Agent ~ "^[gG]o-http-client" && req.url ~ "^/simple" && req.url !~ "/$") {
-      error 666 "go-http-client redirect";
+      error 670 "go-http-client redirect";
     }
     if (req.http.User-Agent == "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36" && req.url ~ "^/simple" && req.url !~ "/$") {
-      error 668 "mock-webkit-client redirect";
+      error 671 "mock-webkit-client redirect";
     }
 
     # We have a number of items that we'll pass back to the origin.
@@ -524,16 +545,36 @@ sub vcl_error {
         synthetic {"<html><head><title>308 Permanent Redirect</title></head><body><center><h1>308 Permanent Redirect</h1></center></body></html>"};
         return(deliver);
     } else if (obj.status == 666) {
-        set obj.status = 406;
-        set obj.http.Content-Type = "text/plain; charset=UTF-8";
-        synthetic {"Go-http-client User-Agents are currently blocked from accessing /simple resources without a trailing slash. This causes a redirect to the canonicalized URL with the trailing slash. PyPI maintainers have been struggling to handle a piece of software with this User-Agent overloading our backends with requests resulting in redirects. Please contact admin@pypi.org if you have information regarding what this software may be."};
-        return (deliver);
-    } else if (obj.status == 667) {
         set obj.status = 200;
         set obj.http.Content-Type = "text/xml; charset=UTF-8";
         synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports 'pip search' (or XML-RPC search). Please use https://${domain}/search (via a browser) instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
         return (deliver);
+    } else if (obj.status == 665) {
+        set obj.status = 200;
+        set obj.http.Content-Type = "text/xml; charset=UTF-8";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC list_packages method. Use JSON or Simple API instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        return (deliver);
+    } else if (obj.status == 667) {
+        set obj.status = 200;
+        set obj.http.Content-Type = "text/xml; charset=UTF-8";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC package_releases method. Use JSON or Simple API instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        return (deliver);
     } else if (obj.status == 668) {
+        set obj.status = 200;
+        set obj.http.Content-Type = "text/xml; charset=UTF-8";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC package_releases method. Use JSON or Simple API instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        return (deliver);
+    } else if (obj.status == 669) {
+        set obj.status = 200;
+        set obj.http.Content-Type = "text/xml; charset=UTF-8";
+        synthetic "<?xml version='1.0'?><methodResponse><fault><value><struct><member><name>faultCode</name><value><int>-32500</int></value></member><member><name>faultString</name><value><string>RuntimeError: PyPI no longer supports the XMLRPC release_data method. Use JSON or Simple API instead. See https://warehouse.pypa.io/api-reference/xml-rpc.html#deprecated-methods for more information.</string></value></member></struct></value></fault></methodResponse>";
+        return (deliver);
+    } else if (obj.status == 670) {
+        set obj.status = 406;
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"Go-http-client User-Agents are currently blocked from accessing /simple resources without a trailing slash. This causes a redirect to the canonicalized URL with the trailing slash. PyPI maintainers have been struggling to handle a piece of software with this User-Agent overloading our backends with requests resulting in redirects. Please contact admin@pypi.org if you have information regarding what this software may be."};
+        return (deliver);
+    } else if (obj.status == 671) {
         set obj.status = 406;
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"Mock WebKit User-Agents are currently blocked from accessing /simple resources without a trailing slash. This causes a redirect to the canonicalized URL with the trailing slash. PyPI maintainers have been struggling to handle a piece of software with this User-Agent overloading our backends with requests resulting in redirects. Please contact admin@pypi.org if you have information regarding what this software may be."};

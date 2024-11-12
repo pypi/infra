@@ -11,17 +11,17 @@ locals {
 
 locals {
   fastly_endpoints = {
-    "python.map.fastly.net_A"       = ["151.101.128.223", "151.101.192.223", "151.101.0.223", "151.101.64.223"]
-    "python.map.fastly.net_AAAA"    = ["2a04:4e42:200::223", "2a04:4e42:400::223", "2a04:4e42:600::223", "2a04:4e42::223"]
-    "python.map.fastly.net_CNAME"   = ["dualstack.python.map.fastly.net"]
+    "python.map.fastly.net_A"     = ["151.101.128.223", "151.101.192.223", "151.101.0.223", "151.101.64.223"]
+    "python.map.fastly.net_AAAA"  = ["2a04:4e42:200::223", "2a04:4e42:400::223", "2a04:4e42:600::223", "2a04:4e42::223"]
+    "python.map.fastly.net_CNAME" = ["dualstack.python.map.fastly.net"]
   }
   domain_map = {
-    "pypi.org"                       = "python.map.fastly.net"
-    "test.pypi.org"                  = "python.map.fastly.net"
-    "pythonhosted.org"               = "python.map.fastly.net"
-    "test.pythonhosted.org"          = "python.map.fastly.net"
-    "files.pythonhosted.org"         = "python.map.fastly.net"
-    "test-files.pythonhosted.org"    = "python.map.fastly.net"
+    "pypi.org"                    = "python.map.fastly.net"
+    "test.pypi.org"               = "python.map.fastly.net"
+    "pythonhosted.org"            = "python.map.fastly.net"
+    "test.pythonhosted.org"       = "python.map.fastly.net"
+    "files.pythonhosted.org"      = "python.map.fastly.net"
+    "test-files.pythonhosted.org" = "python.map.fastly.net"
   }
 }
 
@@ -87,9 +87,9 @@ module "testpypi-email" {
 module "pypi" {
   source = "./warehouse"
 
-  name            = "PyPI"
-  zone_id         = module.dns.primary_zone_id
-  domain          = "pypi.org"
+  name    = "PyPI"
+  zone_id = module.dns.primary_zone_id
+  domain  = "pypi.org"
   # Note:  the first domain in "extra_domains" gets an XMLRPC exception/bypass in VCL
   extra_domains   = ["pypi.python.org", "www.pypi.org", "pypi.io", "www.pypi.io", "warehouse.python.org"]
   backend         = "warehouse.ingress.us-east-2.pypi.io"
@@ -105,8 +105,19 @@ module "pypi" {
     private_key = "${var.linehaul_gcs_private_key}"
   }
 
+  fastly_toppops_enabled = true
+
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
+
+  # NGWAF
+  ngwaf_site_name          = "pypi-prod"
+  ngwaf_email              = var.ngwaf_email
+  ngwaf_token              = var.ngwaf_token
+  activate_ngwaf_service   = true
+  edge_security_dictionary = "Edge_Security"
+  fastly_key               = var.credentials["fastly"]
+  ngwaf_percent_enabled    = 10
 }
 
 module "test-pypi" {
@@ -124,14 +135,25 @@ module "test-pypi" {
   warehouse_ip_salt = var.warehouse_ip_salt
 
   linehaul_enabled = false
-  linehaul_gcs     = {
+  linehaul_gcs = {
     bucket      = "linehaul-logs-staging"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
   }
 
+  fastly_toppops_enabled = false
+
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
+
+  # NGWAF
+  ngwaf_site_name          = "pypi-test"
+  ngwaf_email              = var.ngwaf_email
+  ngwaf_token              = var.ngwaf_token
+  activate_ngwaf_service   = true
+  edge_security_dictionary = "Edge_Security"
+  fastly_key               = var.credentials["fastly"]
+  ngwaf_percent_enabled    = 100
 }
 
 module "file-hosting" {
@@ -144,6 +166,7 @@ module "file-hosting" {
   files_bucket        = "pypi-files"
   s3_logging_keys     = var.fastly_s3_logging
   datadog_token       = var.datadog_token
+  x_pypi_admin_token  = var.x_pypi_admin_token
 
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
@@ -151,11 +174,13 @@ module "file-hosting" {
   gcs_secret_access_key = var.gcs_secret_access_key
 
   linehaul_enabled = true
-  linehaul_gcs     = {
+  linehaul_gcs = {
     bucket      = "linehaul-logs"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
   }
+
+  fastly_toppops_enabled = true
 
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
@@ -172,18 +197,21 @@ module "test-file-hosting" {
   files_bucket        = "pypi-files-staging"
   s3_logging_keys     = var.fastly_s3_logging
   datadog_token       = var.datadog_token
+  x_pypi_admin_token  = var.x_pypi_admin_token
 
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
   gcs_access_key_id     = var.gcs_access_key_id
   gcs_secret_access_key = var.gcs_secret_access_key
 
-  linehaul_enabled      = false
+  linehaul_enabled = false
   linehaul_gcs = {
     bucket      = "linehaul-logs-staging"
     email       = "linehaul-logs@the-psf.iam.gserviceaccount.com"
     private_key = "${var.linehaul_gcs_private_key}"
   }
+
+  fastly_toppops_enabled = false
 
   fastly_endpoints = local.fastly_endpoints
   domain_map       = local.domain_map
@@ -217,9 +245,9 @@ module "test-docs-hosting" {
 module "test-pypi-camo" {
   source = "./image-proxy"
 
-  sitename             = "Test PyPI Camo"
-  domain               = "testpypi-camo.global.ssl.fastly.net"
-  backend_address      = "warehouse-test-camo.ingress.us-east-2.pypi.io"
+  sitename        = "Test PyPI Camo"
+  domain          = "testpypi-camo.global.ssl.fastly.net"
+  backend_address = "warehouse-test-camo.ingress.us-east-2.pypi.io"
 }
 
 module "pypi-camo" {

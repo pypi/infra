@@ -42,6 +42,22 @@ variable "datadog_token" {
   type      = string
   sensitive = true
 }
+variable "x_pypi_admin_token" {
+  type      = string
+  sensitive = true
+}
+
+## NGWAF
+variable "ngwaf_token" {
+  type        = string
+  description = "Secret token for the NGWAF API."
+  sensitive   = true
+}
+variable "ngwaf_email" {
+  type        = string
+  description = "Email address for the NGWAF API."
+  default     = "infrastructure-staff@python.org"
+}
 
 terraform {
   cloud {
@@ -54,22 +70,30 @@ terraform {
 
 
 provider "aws" {
-  alias   = "us-east-2"
-  region  = "us-east-2"
+  alias  = "us-east-2"
+  region = "us-east-2"
 }
 
 
 provider "aws" {
-  alias   = "us-west-2"
-  region  = "us-west-2"
+  alias  = "us-west-2"
+  region = "us-west-2"
 }
 
 provider "aws" {
-  alias   = "email"
-  region  = "us-west-2"
+  alias  = "email"
+  region = "us-west-2"
 }
 
 
 provider "fastly" {
   api_key = var.credentials["fastly"]
+}
+
+provider "sigsci" {
+  alias          = "firewall"
+  corp           = "python"
+  email          = var.ngwaf_email
+  auth_token     = var.ngwaf_token
+  fastly_api_key = var.credentials["fastly"]
 }

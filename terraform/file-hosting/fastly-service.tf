@@ -32,10 +32,55 @@ resource "fastly_service_vcl" "files" {
   }
 
   snippet {
+    name     = "B2-pass"
+    priority = 100
+    type     = "pass"
+    content  = <<-EOT
+        set var.B2AccessKey = "${b2_application_key.primary_storage_read_key_backblaze.application_key_id}";
+        set var.B2SecretKey = "${b2_application_key.primary_storage_read_key_backblaze.application_key}";
+        set var.B2Bucket    = "${var.files_bucket}";
+        set var.B2Region = "us-east-005";
+    EOT
+  }
+
+  snippet {
+    name     = "AWS-Archive-pass"
+    priority = 100
+    type     = "pass"
+    content  = <<-EOT
+        set var.AWSArchiveAccessKeyID = "${aws_iam_access_key.archive_storage_access_key.id}";
+        set var.AWSArchiveSecretAccessKey = "${aws_iam_access_key.archive_storage_access_key.secret}";
+        set var.AWSArchiveBucket = "${aws_s3_bucket.archive_storage_glacier_bucket.id}";
+        set var.AWSArchiveRegion = "${aws_s3_bucket.archive_storage_glacier_bucket.region}";
+    EOT
+  }
+
+  snippet {
     name     = "Linehaul"
     priority = 100
     type     = "log"
     content  = "set var.Ship-Logs-To-Line-Haul = ${var.linehaul_enabled};"
+  }
+
+  snippet {
+    name     = "X-PyPI-Admin"
+    priority = 100
+    type     = "recv"
+    content  = <<-EOT
+        set var.X-PyPI-Admin = "${var.x_pypi_admin_token}";
+    EOT
+  }
+
+  snippet {
+    name     = "Fastly-Top-POPS"
+    priority = 100
+    type     = "init"
+    content = templatefile(
+        "${path.module}/vcl/fastly_top_pops.snippet.vcl",
+        {
+            fastly_toppops_enabled = var.fastly_toppops_enabled
+        }
+    )
   }
 
   backend {
@@ -147,6 +192,17 @@ resource "fastly_service_vcl" "files" {
     domain        = "s3-eu-west-1.amazonaws.com"
     bucket_name   = "psf-fastly-logs-eu-west-1"
     path          = "/${replace(var.domain, ".", "-")}-errors/%Y/%m/%d/%H/%M/"
+  }
+
+  logging_https {
+    name           = "toppops-collector"
+    url            = "https://toppops-ingest.fastlylabs.com/ingest"
+    message_type   = "blank"
+    format_version = 2
+    format         = ""
+    content_type   = "text/plain"
+    method         = "POST"
+    placement      = "none"
   }
 
 

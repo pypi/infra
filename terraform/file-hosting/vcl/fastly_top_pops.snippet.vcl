@@ -1,0 +1,1 @@
+../../warehouse/vcl/fastly_top_pops.snippet.vcl
