@@ -118,6 +118,7 @@ module "pypi" {
   edge_security_dictionary = "Edge_Security"
   fastly_key               = var.credentials["fastly"]
   ngwaf_percent_enabled    = 10
+  datadog_token            = var.datadog_token
 }
 
 module "test-pypi" {
