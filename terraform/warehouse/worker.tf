@@ -45,7 +45,8 @@ resource "aws_iam_policy" "pypi_worker" {
           "sqs:GetQueueUrl",
           "sqs:PurgeQueue",
           "sqs:ReceiveMessage",
-          "sqs:SendMessage"
+          "sqs:SendMessage",
+          "sqs:ChangeMessageVisibility"
       ],
       "Resource": [
           "${aws_sqs_queue.pypi_worker.arn}",
