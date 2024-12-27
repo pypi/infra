@@ -14,6 +14,7 @@ resource "fastly_service_dictionary_items" "edge_security_dictionary_items" {
   items = {
     Enabled : "100"
   }
+  manage_items = true
 }
 
 resource "fastly_service_dynamic_snippet_content" "ngwaf_config_snippets" {
