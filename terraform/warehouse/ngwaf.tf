@@ -23,6 +23,9 @@ resource "fastly_service_dynamic_snippet_content" "ngwaf_config_snippets" {
   snippet_id      = one([for d in fastly_service_vcl.pypi.dynamicsnippet : d.snippet_id if d.name == "ngwaf_config_${each.key}"])
   content         = "### Terraform managed ngwaf_config_${each.key}"
   manage_snippets = true
+  depends_on = [
+    fastly_service_dictionary_items.edge_security_dictionary_items
+  ]
 }
 
 # NGWAF Edge Deployment on SignalSciences.net
