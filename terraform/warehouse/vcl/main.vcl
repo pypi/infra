@@ -7,6 +7,13 @@ sub vcl_recv {
       set req.http.Fastly-Client-IP = client.ip;
     }
 
+    # Reject non-ASCII urls up front. Fastly compute platform closes connections
+    # when non-ASCII characters are received, leading to a 503 rather than 400 if
+    # they are used as an origin (as is the case when using NGWAF edge deployments.
+    if (req.url ~ "[\x80-\xff]") {
+      error 400;
+    }
+
     declare local var.Warehouse-Ip-Salt STRING;
 
     # Prevent edge from caching stale content served from shield
