@@ -203,6 +203,8 @@ sub vcl_recv {
         set req.http.Warehouse-Country-Name = client.geo.country_name;
         set req.http.Warehouse-Region = client.geo.region;
         set req.http.Warehouse-City = client.geo.city;
+        set req.http.Warehouse-Latitude = client.geo.latitude;
+        set req.http.Warehouse-Longitude = client.geo.longitude;
     }
 
 #FASTLY recv
