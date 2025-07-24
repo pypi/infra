@@ -22,6 +22,7 @@ locals {
     "test.pythonhosted.org"       = "python.map.fastly.net"
     "files.pythonhosted.org"      = "python.map.fastly.net"
     "test-files.pythonhosted.org" = "python.map.fastly.net"
+    "inspector.pypi.io"           = "python.map.fastly.net"
   }
 }
 
@@ -258,6 +259,15 @@ module "pypi-camo" {
   sitename        = "PyPI Camo"
   domain          = "pypi-camo.global.ssl.fastly.net"
   backend_address = "warehouse-camo.ingress.us-east-2.pypi.io"
+}
+
+module "inspector" {
+  source = "./inspector"
+
+  name    = "Inspector"
+  zone_id = module.dns.primary_zone_id
+  domain  = "inspector.pypi.io"
+  backend = "inspector.ingress.us-east-2.pypi.io"
 }
 
 output "nameservers" { value = module.dns.nameservers }
