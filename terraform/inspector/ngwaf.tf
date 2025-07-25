@@ -1,13 +1,3 @@
-terraform {
-  required_providers {
-    sigsci = {
-      source                = "signalsciences/sigsci"
-      version               = "~> 3.0"
-      configuration_aliases = [sigsci.firewall]
-    }
-  }
-}
-
 provider "sigsci" {
   # if i dont add this it errors: Provider configuration not present
   alias      = "firewall"
