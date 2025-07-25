@@ -261,11 +261,16 @@ module "pypi-camo" {
   backend_address = "warehouse-camo.ingress.us-east-2.pypi.io"
 }
 
+# inspector dns zone is different fromd ns module one
+data "aws_route53_zone" "pypi_io" {
+  name = "pypi.io"
+}
+
 module "inspector" {
   source = "./inspector"
 
   name    = "Inspector"
-  zone_id = module.dns.primary_zone_id
+  zone_id = data.aws_route53_zone.pypi_io.zone_id
   domain  = "inspector.pypi.io"
   backend = "inspector.ingress.us-east-2.pypi.io"
 
