@@ -199,7 +199,7 @@ resource "fastly_service_vcl" "files" {
     url            = "https://toppops-ingest.fastlylabs.com/ingest"
     message_type   = "blank"
     format_version = 2
-    format         = ""
+    format         = "%h %l %u %t \"%r\" %>s %b" # %h %l %u %t "%r" %&gt;s %b
     content_type   = "text/plain"
     method         = "POST"
     placement      = "none"
