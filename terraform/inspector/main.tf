@@ -3,6 +3,14 @@ variable "zone_id" { type = string }
 variable "domain" { type = string }
 variable "backend" { type = string }
 
+variable "ngwaf_site_name" { type = string }
+variable "ngwaf_email" { type = string }
+variable "ngwaf_token" { type = string }
+variable "activate_ngwaf_service" { type = bool }
+variable "edge_security_dictionary" { type = string }
+variable "fastly_key" { type = string }
+variable "ngwaf_percent_enabled" { type = number }
+
 resource "fastly_service_vcl" "inspector" {
   name     = var.name
   activate = true
@@ -44,6 +52,51 @@ resource "fastly_service_vcl" "inspector" {
     window         = 5
   }
 
+  # NGWAF
+  dynamic "dictionary" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name          = var.edge_security_dictionary
+      force_destroy = true
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_init"
+      type     = "init"
+      priority = 0
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_miss"
+      type     = "miss"
+      priority = 9000
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_pass"
+      type     = "pass"
+      priority = 9000
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_deliver"
+      type     = "deliver"
+      priority = 9000
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       product_enablement,
@@ -56,5 +109,5 @@ resource "aws_route53_record" "primary" {
   name    = var.domain
   type    = "CNAME"
   ttl     = 3600
-  records = ["inspector.ingress.us-east-2.pypi.io"]
+  records = ["dualstack.python.map.fastly.net"]
 }
