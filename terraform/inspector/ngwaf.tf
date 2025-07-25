@@ -12,7 +12,7 @@ resource "fastly_service_dictionary_items" "edge_security_dictionary_items" {
   service_id    = fastly_service_vcl.inspector.id
   dictionary_id = one([for d in fastly_service_vcl.inspector.dictionary : d.dictionary_id if d.name == var.edge_security_dictionary])
   items = {
-    Edge-Security = "1.0.0"
+    Enabled : "100"
   }
   manage_items = false
 }
