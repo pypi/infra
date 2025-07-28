@@ -43,7 +43,7 @@ resource "fastly_service_vcl" "inspector" {
 
     host   = var.domain
     method = "GET"
-    path   = "/_health"
+    path   = "/_health/"
 
     check_interval = 15000
     timeout        = 5000
