@@ -278,7 +278,7 @@ module "inspector" {
   ngwaf_site_name          = "pypi-inspector"
   ngwaf_email              = var.ngwaf_email
   ngwaf_token              = var.ngwaf_token
-  activate_ngwaf_service   = false
+  activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
   fastly_key               = var.credentials["fastly"]
   ngwaf_percent_enabled    = 100
