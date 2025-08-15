@@ -32,6 +32,13 @@ resource "sigsci_edge_deployment" "ngwaf_edge_site_service" {
   site_short_name = var.ngwaf_site_name
 }
 
+# try a delay so that the edge deployment is ready before linking the service
+resource "time_sleep" "wait_for_edge_deployment" {
+  count           = var.activate_ngwaf_service ? 1 : 0
+  depends_on      = [sigsci_edge_deployment.ngwaf_edge_site_service]
+  create_duration = "30s"
+}
+
 resource "sigsci_edge_deployment_service" "ngwaf_edge_service_link" {
   count            = var.activate_ngwaf_service ? 1 : 0
   provider         = sigsci.firewall
@@ -40,7 +47,7 @@ resource "sigsci_edge_deployment_service" "ngwaf_edge_service_link" {
   activate_version = var.activate_ngwaf_service
   percent_enabled  = var.ngwaf_percent_enabled
   depends_on = [
-    sigsci_edge_deployment.ngwaf_edge_site_service,
+    time_sleep.wait_for_edge_deployment,
     fastly_service_vcl.inspector,
     fastly_service_dictionary_items.edge_security_dictionary_items,
     fastly_service_dynamic_snippet_content.ngwaf_config_snippets,
