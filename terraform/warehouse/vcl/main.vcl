@@ -5,6 +5,21 @@ sub vcl_recv {
     # Disallow client provided Fastly-Client-IP headers
     if (fastly.ff.visits_this_service == 0 && req.restarts == 0) {
       set req.http.Fastly-Client-IP = client.ip;
+
+      # Geolocate the client IP address.
+      # Must be done here to prevent Shield from supplying the shield's values.
+      # Set distinct headers for country, region, and city.
+      # See https://developer.fastly.com/reference/vcl/variables/geolocation/
+      # Any placeholder values for reserved blocks are sent through
+      # and left to pypi/warehouse on how to process
+      set req.http.Warehouse-Continent-Code = client.geo.continent_code;
+      set req.http.Warehouse-Country-Code = client.geo.country_code;
+      set req.http.Warehouse-Country-Code3 = client.geo.country_code3;
+      set req.http.Warehouse-Country-Name = client.geo.country_name;
+      set req.http.Warehouse-Region = client.geo.region;
+      set req.http.Warehouse-City = client.geo.city;
+      set req.http.Warehouse-Latitude = client.geo.latitude;
+      set req.http.Warehouse-Longitude = client.geo.longitude;
     }
 
     # Reject non-ASCII urls up front. Fastly compute platform closes connections
@@ -191,20 +206,6 @@ sub vcl_recv {
 
         # TODO: After backend is updated, replace or remove `req.http.Warehouse-IP` above
         set req.http.Warehouse-Hashed-IP = var.hashed_ip;
-
-        # Geolocate the client IP address.
-        # Set distinct headers for country, region, and city.
-        # See https://developer.fastly.com/reference/vcl/variables/geolocation/
-        # Any placeholder values for reserved blocks are sent through
-        # and left to pypi/warehouse on how to process
-        set req.http.Warehouse-Continent-Code = client.geo.continent_code;
-        set req.http.Warehouse-Country-Code = client.geo.country_code;
-        set req.http.Warehouse-Country-Code3 = client.geo.country_code3;
-        set req.http.Warehouse-Country-Name = client.geo.country_name;
-        set req.http.Warehouse-Region = client.geo.region;
-        set req.http.Warehouse-City = client.geo.city;
-        set req.http.Warehouse-Latitude = client.geo.latitude;
-        set req.http.Warehouse-Longitude = client.geo.longitude;
     }
 
 #FASTLY recv
