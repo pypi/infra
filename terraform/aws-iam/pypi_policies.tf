@@ -5,30 +5,6 @@
 # pypi-db-backup-archive - 795 days ago
 # PyPIReadOnly - 913 days ago
 
-# DB Backup Archive Policy - not used in 795 days
-# resource "aws_iam_policy" "pypi_db_backup_archive" {
-#   name = "pypi-db-backup-archive"
-#
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Effect   = "Allow"
-#         Action   = "s3:ListAllMyBuckets"
-#         Resource = "*"
-#       },
-#       {
-#         Effect = "Allow"
-#         Action = "s3:*"
-#         Resource = [
-#           "arn:aws:s3:::pypi-db-backup-archive",
-#           "arn:aws:s3:::pypi-db-backup-archive/*"
-#         ]
-#       }
-#     ]
-#   })
-# }
-
 # opensearch
 resource "aws_iam_policy" "pypi_elasticsearch" {
   name = "PyPIElasticSearch"
@@ -171,42 +147,6 @@ resource "aws_iam_policy" "pypi_s3_access" {
           "arn:aws:s3:::pypi-files/*",
           "arn:aws:s3:::pypi-files-archive",
           "arn:aws:s3:::pypi-files-archive/*"
-        ]
-      }
-    ]
-  })
-}
-
-# amazon sqs - unused 231 days
-resource "aws_iam_policy" "pypi_worker_sqs" {
-  name        = "PyPIWorkerSQS"
-  description = "R/W Access to PyPI's SQS Worker Queue"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:ListQueues"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes",
-          "sqs:GetQueueUrl",
-          "sqs:PurgeQueue",
-          "sqs:ReceiveMessage",
-          "sqs:SendMessage",
-          "sqs:ChangeMessageVisibility"
-        ]
-        Resource = [
-          "arn:aws:sqs:us-east-2:220435833635:pypi-worker",
-          "arn:aws:sqs:us-east-2:220435833635:pypi-worker-default",
-          "arn:aws:sqs:us-east-2:220435833635:pypi-worker-malware"
         ]
       }
     ]
