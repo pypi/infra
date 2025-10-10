@@ -1,10 +1,3 @@
-output "group_arns" {
-  description = "ARNs of IAM groups"
-  value = {
-    administrator = aws_iam_group.administrator.arn
-  }
-}
-
 output "role_arns" {
   description = "ARNs of IAM roles"
   value = {
