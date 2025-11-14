@@ -364,6 +364,29 @@ sub vcl_recv {
 }
 
 
+# Common logic for both miss and pass
+sub miss_pass {
+    # Remove Accept-Encoding header to prevent origin server from doing
+    # gzip by itself, since we want to do it at the Edge
+    unset bereq.http.Accept-Encoding;
+}
+
+
+sub vcl_pass {
+#FASTLY pass
+
+  call miss_pass;
+}
+
+
+sub vcl_miss {
+#FASTLY miss
+
+  call miss_pass;
+}
+
+
+
 sub vcl_fetch {
 
     # These are newer kinds of redirects which should be able to be cached by
@@ -408,6 +431,35 @@ sub vcl_fetch {
     # If we've restarted, then we'll record the number of restarts.
     if(req.restarts > 0 ) {
         set beresp.http.Fastly-Restarts = req.restarts;
+    }
+
+    # We want to enable compression, but due to CRIME attacks we want to skip
+    # compressing anything that Varies on a Cookie or Authorization header
+    # because we don't know if they are safe to compress.
+    #
+    # We also want to skip it if we've already gotten a Content-Encoding
+    if (beresp.http.Vary !~ "(?i)(Cookie|Authorization)" &&
+            !beresp.http.Content-Encoding) {
+        # Always set a Vary header, even if we don't end up compressing
+        # the object, because the uncompressed version should only be
+        # used when the request does NOT request the compressed one.
+        if (!beresp.http.Vary ~ "Accept-Encoding") {
+            if (beresp.http.Vary) {
+                set beresp.http.Vary = beresp.http.Vary ", Accept-Encoding";
+            } else {
+                set beresp.http.Vary = "Accept-Encoding";
+            }
+        }
+
+        # Perform compression if the client claims to understand it
+        if (req.http.Accept-Encoding == "gzip") {
+            set beresp.gzip = true;
+        } else if (req.http.Accept-Encoding == "br") {
+            set beresp.brotli = true;
+        } else {
+            set beresp.gzip = false;
+            set beresp.brotli = false;
+        }
     }
 
     # If there is a Set-Cookie header, we'll ensure that we do not cache the
