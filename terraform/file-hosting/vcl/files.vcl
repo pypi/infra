@@ -54,6 +54,11 @@ sub vcl_recv {
         error 603 "SSL is required";
     }
 
+    # Drop the `x-amz-cf-id` header in edge requests unconditionally. This
+    # causes an S3-compatible backend to fail to respond if the corresponding
+    # signed header is not included: https://github.com/pypi/infra/issues/219
+    unset req.http.x-amz-cf-id;
+
     # Forbid clients without SNI support, except Fastly/cache-check (Note this is disabled at edge, but provide a fallback).
     if (!req.http.Fastly-FF && tls.client.servername == "" && req.http.User-Agent != "Fastly/cache-check") {
         error 604 "SNI is required";
