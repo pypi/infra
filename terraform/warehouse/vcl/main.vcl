@@ -374,6 +374,11 @@ sub vcl_fetch {
 
     # Handle 5XX (or any other unwanted status code)
     if (beresp.status >= 500 && beresp.status < 600) {
+        # Flag for logging — must be set BEFORE stale/restart
+        # req.http.* headers persist across restarts and into vcl_log
+        set req.http.X-Origin-5xx = "true";
+        set req.http.X-Origin-Status = beresp.status;
+
         # Deliver stale if the object is available
         if (stale.exists) {
             return(deliver_stale);
