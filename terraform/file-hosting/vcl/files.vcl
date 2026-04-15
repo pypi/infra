@@ -587,7 +587,6 @@ sub vcl_error {
         set obj.http.Access-Control-Allow-Methods = "GET, HEAD, OPTIONS";
         set obj.http.Access-Control-Allow-Headers = "Range, Accept-Encoding";
         set obj.http.Access-Control-Max-Age = "86400";
-        set obj.http.Content-Length = "0";
         synthetic {""};
         return (deliver);
     }
