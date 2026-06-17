@@ -381,7 +381,8 @@ sub vcl_fetch {
         # Flag for logging — must be set BEFORE stale/restart
         # req.http.* headers persist across restarts and into vcl_log
         set req.http.X-Origin-5xx = "true";
-        set req.http.X-Origin-Status = beresp.status;
+        # Prefer the shield-carried code so the edge doesn't clobber it with 503
+        set req.http.X-Origin-Status = if(beresp.http.X-Origin-Status, beresp.http.X-Origin-Status, beresp.status);
 
         # Deliver stale if the object is available
         if (stale.exists) {
@@ -498,6 +499,12 @@ sub vcl_deliver {
     # they are not generally useful.
     unset resp.http.Via;
 
+    # Edge only: move carried origin status to req for vcl_log, strip before client
+    if (resp.http.X-Origin-Status && fastly.ff.visits_this_service == 0) {
+        set req.http.X-Origin-Status = resp.http.X-Origin-Status;
+        unset resp.http.X-Origin-Status;
+    }
+
     # The Age header will reflect how long an item has been in the Varnish cache.
     # If present, clients will calculate `cache duration = max-age - Age` to see
     # how long they should cache for. We drop the header so clients will use max-age.
@@ -532,6 +539,11 @@ sub vcl_error {
     if (obj.status >= 500 && obj.status < 600) {
         if (stale.exists) {
             return(deliver_stale);
+        }
+
+        # Carry origin status on the synthetic so it survives shielding to the edge
+        if (req.http.X-Origin-Status) {
+            set obj.http.X-Origin-Status = req.http.X-Origin-Status;
         }
 
         set obj.http.Content-Type = "text/html; charset=utf-8";
