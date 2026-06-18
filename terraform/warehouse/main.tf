@@ -199,7 +199,7 @@ resource "fastly_service_vcl" "pypi" {
     name               = "Log Edge Errors"
     token              = var.datadog_token
     response_condition = "5xx Error"
-    format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"origin_status\": \"%%{req.http.X-Origin-Status}V\", \"status_code\": \"%%s\", \"method\": \"%%m\", \"url\": \"%%{json.escape(cstr_escape(req.url))}V\", \"host\": \"%%{json.escape(if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host))}V\", \"referer\": \"%%{json.escape(req.http.referer)}V\", \"useragent\": \"%%{json.escape(req.http.User-Agent)}V\", \"client_ip\": \"%%h\", \"geo_country\": \"%%{client.geo.country_code}V\", \"geo_city\": \"%%{json.escape(client.geo.city.utf8)}V\", \"request_time_ms\": \"%%{time.elapsed.msec}V\" }"
+    format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"origin_status\": \"%%{req.http.X-Origin-Status}V\", \"status_code\": \"%%{resp.status}V\", \"method\": \"%%{req.method}V\", \"url\": \"%%{json.escape(cstr_escape(req.url))}V\", \"host\": \"%%{json.escape(if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host))}V\", \"referer\": \"%%{json.escape(req.http.referer)}V\", \"useragent\": \"%%{json.escape(req.http.User-Agent)}V\", \"client_ip\": \"%%{client.ip}V\", \"geo_country\": \"%%{client.geo.country_code}V\", \"geo_city\": \"%%{json.escape(client.geo.city.utf8)}V\", \"request_time_ms\": \"%%{time.elapsed.msec}V\" }"
   }
 
   response_object {
