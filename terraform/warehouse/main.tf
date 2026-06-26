@@ -29,7 +29,7 @@ locals {
 
 
 resource "fastly_service_vcl" "pypi" {
-  name     = var.name
+  name = var.name
   # Set to false for spicy changes
   activate = true
 
@@ -73,10 +73,10 @@ resource "fastly_service_vcl" "pypi" {
     priority = 100
     type     = "init"
     content = templatefile(
-        "${path.module}/vcl/fastly_top_pops.snippet.vcl",
-        {
-            fastly_toppops_enabled = var.fastly_toppops_enabled
-        }
+      "${path.module}/vcl/fastly_top_pops.snippet.vcl",
+      {
+        fastly_toppops_enabled = var.fastly_toppops_enabled
+      }
     )
   }
 
@@ -125,16 +125,16 @@ resource "fastly_service_vcl" "pypi" {
   }
 
   vcl {
-    name    = "Main"
+    name = "Main"
     content = templatefile(
-        "${path.module}/vcl/main.vcl",
-        {
-            pretty_503 = file("${path.module}/html/error.html")
-            domain = var.domain
-            extra_domains = var.extra_domains
-        }
+      "${path.module}/vcl/main.vcl",
+      {
+        pretty_503    = file("${path.module}/html/error.html")
+        domain        = var.domain
+        extra_domains = var.extra_domains
+      }
     )
-    main    = true
+    main = true
   }
 
   logging_s3 {
@@ -199,7 +199,7 @@ resource "fastly_service_vcl" "pypi" {
     name               = "Log Edge Errors"
     token              = var.datadog_token
     response_condition = "5xx Error"
-    format             = "{ \"ddsource\": \"fastly\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"origin_status\": \"%%{req.http.X-Origin-Status}V\", \"status_code\": \"%%{resp.status}V\", \"method\": \"%%{req.method}V\", \"url\": \"%%{json.escape(cstr_escape(req.url))}V\", \"host\": \"%%{json.escape(if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host))}V\", \"referer\": \"%%{json.escape(req.http.referer)}V\", \"useragent\": \"%%{json.escape(req.http.User-Agent)}V\", \"client_ip\": \"%%{client.ip}V\", \"geo_country\": \"%%{client.geo.country_code}V\", \"geo_city\": \"%%{json.escape(client.geo.city.utf8)}V\", \"request_time_ms\": \"%%{time.elapsed.msec}V\" }"
+    format             = "{ \"ddsource\": \"fastly\", \"status\": \"%%{if(resp.status >= 500, \"error\", if(resp.status >= 400, \"warning\", \"info\"))}V\", \"service\": \"%%{req.service_id}V\", \"date\": \"%%{begin:%Y-%m-%dT%H:%M:%S%z}t\", \"origin_status\": \"%%{req.http.X-Origin-Status}V\", \"status_code\": \"%%{resp.status}V\", \"method\": \"%%{req.method}V\", \"url\": \"%%{json.escape(cstr_escape(req.url))}V\", \"host\": \"%%{json.escape(if(req.http.Fastly-Orig-Host, req.http.Fastly-Orig-Host, req.http.Host))}V\", \"referer\": \"%%{json.escape(req.http.referer)}V\", \"useragent\": \"%%{json.escape(req.http.User-Agent)}V\", \"client_ip\": \"%%{client.ip}V\", \"geo_country\": \"%%{client.geo.country_code}V\", \"geo_city\": \"%%{json.escape(client.geo.city.utf8)}V\", \"request_time_ms\": \"%%{time.elapsed.msec}V\" }"
   }
 
   response_object {
