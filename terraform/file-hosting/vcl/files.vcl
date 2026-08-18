@@ -562,6 +562,16 @@ sub vcl_error {
         if (stale.exists) {
             return(deliver_stale);
         }
+
+        # Fastly synthesizes a 503 without running vcl_fetch when a backend
+        # times out, refuses the connection, or fails TLS negotiation, so the
+        # 5xx restart in vcl_fetch never sees those failures. Restart here so
+        # that vcl_recv can send us to the archive backend.
+        if (req.restarts < 1
+                && (req.request == "GET" || req.request == "HEAD")
+                && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+            restart;
+        }
     }
 
     # Handle our "error" conditions which are really just ways to set synthetic
