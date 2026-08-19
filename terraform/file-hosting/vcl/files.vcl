@@ -48,6 +48,19 @@ sub vcl_recv {
 
 #FASTLY recv
 
+    # This service only ever serves files, so reads, CORS preflights, and
+    # purges are the only methods with a legitimate use. Passing anything else
+    # through costs an origin request and returns a storage provider branded
+    # error to the client, so reject it here, up front, where the set of
+    # methods we accept is plain to see. Note this must stay below
+    # `#FASTLY recv`, which is what turns a PURGE into a FASTLYPURGE.
+    if (req.request != "HEAD" &&
+        req.request != "GET" &&
+        req.request != "OPTIONS" &&
+        req.request != "FASTLYPURGE") {
+      error 605 "Method Not Allowed";
+    }
+
     # We want to Force SSL for the WebUI by returning an error code directing people
     # to instead use HTTPS.
     if (!req.http.Fastly-SSL) {
@@ -99,12 +112,11 @@ sub vcl_recv {
       error 204 "CORS preflight";
     }
 
-    # Do not bother to attempt to run the caching mechanisms for methods that
-    # are not generally safe to cache.
-    if (req.request != "HEAD" &&
-        req.request != "GET" &&
-        req.request != "FASTLYPURGE") {
-      return(pass);
+    # Anything else shaped like an OPTIONS request is not a preflight we can
+    # answer, so reject it here rather than letting object storage return a
+    # provider branded 501.
+    if (req.request == "OPTIONS") {
+      error 605 "Method Not Allowed";
     }
 
     return(lookup);
@@ -589,6 +601,15 @@ sub vcl_error {
         set obj.response = "SNI is required";
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"SNI is required."};
+        return (deliver);
+    }
+
+    if (obj.status == 605) {
+        set obj.status = 405;
+        set obj.response = "Method Not Allowed";
+        set obj.http.Allow = "GET, HEAD, OPTIONS";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"Method not allowed."};
         return (deliver);
     }
 
