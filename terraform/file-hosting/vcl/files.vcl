@@ -11,6 +11,13 @@ sub vcl_recv {
             # Don't enable segmented caching if we're serving a metadata file
             set req.enable_segmented_caching = false;
         }
+        # Segmented caching returns 501 for suffix ranges (bytes=-N) and
+        # multi-ranges rather than serving them. Installers use suffix
+        # ranges to read wheel metadata, so exempt those requests and let
+        # the whole object cache instead.
+        if (req.http.Range && req.http.Range !~ "^bytes=[0-9]+-[0-9]*$") {
+            set req.enable_segmented_caching = false;
+        }
     }
 
     # I'm not 100% sure on what this is exactly for, it was taken from the
