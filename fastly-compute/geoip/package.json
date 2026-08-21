@@ -1,0 +1,22 @@
+{
+  "name": "get-geolocation-for-ip",
+  "version": "0.4.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pypi/infra.git"
+  },
+  "type": "module",
+  "author": "chloe@python.org",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pypi/infra/issues"
+  },
+  "homepage": "https://developer.fastly.com/solutions/starters/compute-starter-kit-javascript-empty",
+  "dependencies": {
+    "@fastly/js-compute": "^2.0.1"
+  },
+  "scripts": {
+    "build": "js-compute-runtime ./src/index.js ./bin/main.wasm",
+    "deploy": "fastly compute publish"
+  }
+}
