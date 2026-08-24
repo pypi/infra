@@ -18,6 +18,14 @@ sub vcl_recv {
         if (req.http.Range && req.http.Range !~ "^bytes=[0-9]+-[0-9]*$") {
             set req.enable_segmented_caching = false;
         }
+        # Inverted ranges (start > end) are well-formed but unsatisfiable, and
+        # segmented caching answers them with a 501 too. Exempt them so the
+        # normal range handling can return a 416 instead.
+        if (req.http.Range ~ "^bytes=([0-9]+)-([0-9]+)$") {
+            if (std.atoi(re.group.1) > std.atoi(re.group.2)) {
+                set req.enable_segmented_caching = false;
+            }
+        }
     }
 
     # I'm not 100% sure on what this is exactly for, it was taken from the
