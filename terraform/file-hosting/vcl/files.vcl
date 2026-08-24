@@ -640,8 +640,17 @@ sub vcl_log {
     # If we're not executing a shielding request, and the URL is one of our file
     # URLs, and it's a GET request, and the response is either a 200 or a 206
     # then...
+    #
+    # Sidecar objects share the distribution's path prefix and its
+    # `x-pypi-file-*` metadata -- PEP 658 `.metadata` files, and the pre-2023
+    # `.asc` signatures still served for old releases -- so matching on the
+    # prefix alone counts fetching one as a download of the distribution
+    # itself. Match the three extensions PEP 527 allows for upload instead.
+    # Formats frozen since 2016 (`.egg`, `.exe`, `.msi`, `.rpm`, ...) are 0.7%
+    # of files and are deliberately not counted.
     if (!req.http.Fastly-FF
             && req.url.path ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/"
+            && req.url.path ~ "(?i)\.(whl|tar\.gz|zip)$"
             && (req.request == "GET" || req.request == "OPTIONS")
             && http_status_matches(resp.status, "200,206")) {
 
