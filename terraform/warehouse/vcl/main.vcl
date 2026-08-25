@@ -23,6 +23,8 @@ sub vcl_recv {
       set req.http.Warehouse-City = client.geo.city;
       set req.http.Warehouse-Latitude = client.geo.latitude;
       set req.http.Warehouse-Longitude = client.geo.longitude;
+      set req.http.Warehouse-Proxy-Type = client.geo.proxy_type;
+      set req.http.Warehouse-Proxy-Description = client.geo.proxy_description;
     }
 
     # Reject non-ASCII urls up front. Fastly compute platform closes connections
