@@ -23,6 +23,16 @@ sub vcl_recv {
       set req.http.Warehouse-City = client.geo.city;
       set req.http.Warehouse-Latitude = client.geo.latitude;
       set req.http.Warehouse-Longitude = client.geo.longitude;
+      set req.http.Warehouse-Proxy-Type = client.geo.proxy_type;
+      set req.http.Warehouse-Proxy-Description = client.geo.proxy_description;
+    }
+
+    # On Shield, client.ip is the edge POP, so client.geo.* describes the POP
+    # rather than the end user. The 5xx logging condition has no Fastly-FF guard
+    # and fires on both tiers, so point geo lookups back at the original client.
+    # https://www.fastly.com/documentation/reference/vcl/variables/geolocation/client-geo-ip-override/
+    if (fastly.ff.visits_this_service > 0 && req.http.Fastly-Client-IP) {
+      set client.geo.ip_override = req.http.Fastly-Client-IP;
     }
 
     # Reject non-ASCII urls up front. Fastly compute platform closes connections
