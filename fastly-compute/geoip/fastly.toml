@@ -1,0 +1,19 @@
+# This file describes a Fastly Compute@Edge package. To learn more visit:
+# https://developer.fastly.com/reference/fastly-toml/
+
+authors = ["chloe.gerhardson@pyfound.org"]
+description = "geoip"
+language = "javascript"
+manifest_version = 3
+name = "geoip"
+service_id = "CnsNqIdpSj1tZNLTl6PUi4"
+
+[scripts]
+  build = "npm run build"
+
+[local_server]
+  [local_server.config_stores]
+    [local_server.config_stores.geoip_auth]
+      file = ".secret.json"
+      format = "json"
+
