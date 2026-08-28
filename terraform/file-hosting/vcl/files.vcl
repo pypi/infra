@@ -4,10 +4,28 @@ sub vcl_recv {
     # Require authentication for curl -XPURGE requests, required for Segmented Caching
     set req.http.Fastly-Purge-Requires-Auth = "1";
 
+    # I'm not 100% sure on what this is exactly for, it was taken from the
+    # Fastly documentation, however, what I *believe* it does is just ensure
+    # that we don't serve a stale copy of the page from the shield node when
+    # an edge node is requesting content.
+    if (req.http.Fastly-FF) {
+        set req.max_stale_while_revalidate = 0s;
+    }
+
+    # Some (Older) clients will send a hash fragment as part of the URL even
+    # though that is a local only modification. This breaks this badly for the
+    # files in S3, and in general it's just not needed.
+    set req.url = regsub(req.url, "#.*$", "");
+
+    # We do not support any kind of a query string for these files. Stripping them
+    # out here will save on cache misses for when query strings get added by end
+    # users for one reason or another.
+    set req.url = req.url.path;
+
     # Enable Segmented Caching for package URLS
     if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
         set req.enable_segmented_caching = true;
-        if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*).metadata$") {
+        if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*)\.metadata$") {
             # Don't enable segmented caching if we're serving a metadata file
             set req.enable_segmented_caching = false;
         }
@@ -27,24 +45,6 @@ sub vcl_recv {
             }
         }
     }
-
-    # I'm not 100% sure on what this is exactly for, it was taken from the
-    # Fastly documentation, however, what I *believe* it does is just ensure
-    # that we don't serve a stale copy of the page from the shield node when
-    # an edge node is requesting content.
-    if (req.http.Fastly-FF) {
-        set req.max_stale_while_revalidate = 0s;
-    }
-
-    # Some (Older) clients will send a hash fragment as part of the URL even
-    # though that is a local only modification. This breaks this badly for the
-    # files in S3, and in general it's just not needed.
-    set req.url = regsub(req.url, "#.*$", "");
-
-    # We do not support any kind of a query string for these files. Stripping them
-    # out here will save on cache misses for when query strings get added by end
-    # users for one reason or another.
-    set req.url = req.url.path;
 
     # Currently Fastly does not provide a way to access response headers when
     # the response is a 304 response. This is because the RFC states that only
@@ -201,7 +201,7 @@ sub vcl_fetch {
     }
 
     # Check if we are serving a .metadata file, which are stored uncompressed
-    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*).metadata$" ) {
+    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*)\.metadata$" ) {
         # Always set a Vary header, even if we don't end up compressing
         # the object, because the uncompressed version should only be
         # used when the request does NOT request the compressed one.
