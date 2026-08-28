@@ -151,22 +151,22 @@ resource "fastly_service_vcl" "pypi" {
     path          = "/${replace(var.domain, ".", "-")}/%Y/%m/%d/"
   }
 
-  logging_s3 {
-    name = "S3 Error Logs"
-
-    format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{cstr_escape(req.url)}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %D \"%%{fastly_info.state}V\" \"%%{req.restarts}V\" \"%%{req.backend}V\""
-    format_version = 2
-    gzip_level     = 9
-
-    period             = 60
-    response_condition = "5xx Error"
-
-    s3_access_key = var.s3_logging_keys["access_key"]
-    s3_secret_key = var.s3_logging_keys["secret_key"]
-    domain        = "s3-eu-west-1.amazonaws.com"
-    bucket_name   = "psf-fastly-logs-eu-west-1"
-    path          = "/${replace(var.domain, ".", "-")}-errors/%Y/%m/%d/%H/%M/"
-  }
+  # logging_s3 {
+  #   name = "S3 Error Logs"
+  #
+  #   format         = "%h \"%%{now}V\" %l \"%%{req.request}V %%{cstr_escape(req.url)}V\" %%{req.proto}V %>s %%{resp.http.Content-Length}V %%{resp.http.age}V \"%%{resp.http.x-cache}V\" \"%%{resp.http.x-cache-hits}V\" \"%%{req.http.content-type}V\" \"%%{req.http.accept-language}V\" \"%%{cstr_escape(req.http.user-agent)}V\" %D \"%%{fastly_info.state}V\" \"%%{req.restarts}V\" \"%%{req.backend}V\""
+  #   format_version = 2
+  #   gzip_level     = 9
+  #
+  #   period             = 60
+  #   response_condition = "5xx Error"
+  #
+  #   s3_access_key = var.s3_logging_keys["access_key"]
+  #   s3_secret_key = var.s3_logging_keys["secret_key"]
+  #   domain        = "s3-eu-west-1.amazonaws.com"
+  #   bucket_name   = "psf-fastly-logs-eu-west-1"
+  #   path          = "/${replace(var.domain, ".", "-")}-errors/%Y/%m/%d/%H/%M/"
+  # }
 
   logging_gcs {
     name             = "Linehaul GCS"
