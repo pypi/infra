@@ -92,6 +92,14 @@ sub vcl_recv {
         error 604 "SNI is required";
     }
 
+    # Only /packages/ is routed here, to object storage or Conveyor's legacy
+    # redirects. Anything else reaches Conveyor's documentation route, which
+    # costs two S3 lookups per 404, so a wordlist scan exhausts it. Purges
+    # never reach origin. https://github.com/pypi/infra/issues/246
+    if (req.request != "FASTLYPURGE" && req.url !~ "^/packages/") {
+        error 606 "Not Found";
+    }
+
     # Admin Bypass! This is authenticated via a shared secret and allows an admin to
     # force a backend and optionally bypass the cache
     if (req.http.X-PyPI-Admin == var.X-PyPI-Admin) {
@@ -625,6 +633,14 @@ sub vcl_error {
         set obj.http.Allow = "GET, HEAD, OPTIONS";
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"Method not allowed."};
+        return (deliver);
+    }
+
+    if (obj.status == 606) {
+        set obj.status = 404;
+        set obj.response = "Not Found";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"Not found."};
         return (deliver);
     }
 
