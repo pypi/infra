@@ -4,15 +4,6 @@ sub vcl_recv {
     # Require authentication for curl -XPURGE requests, required for Segmented Caching
     set req.http.Fastly-Purge-Requires-Auth = "1";
 
-    # Enable Segmented Caching for package URLS
-    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
-        set req.enable_segmented_caching = true;
-        if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*).metadata$") {
-            # Don't enable segmented caching if we're serving a metadata file
-            set req.enable_segmented_caching = false;
-        }
-    }
-
     # I'm not 100% sure on what this is exactly for, it was taken from the
     # Fastly documentation, however, what I *believe* it does is just ensure
     # that we don't serve a stale copy of the page from the shield node when
@@ -31,6 +22,30 @@ sub vcl_recv {
     # users for one reason or another.
     set req.url = req.url.path;
 
+    # Enable Segmented Caching for package URLS
+    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+        set req.enable_segmented_caching = true;
+        if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*)\.metadata$") {
+            # Don't enable segmented caching if we're serving a metadata file
+            set req.enable_segmented_caching = false;
+        }
+        # Segmented caching returns 501 for suffix ranges (bytes=-N) and
+        # multi-ranges rather than serving them. Installers use suffix
+        # ranges to read wheel metadata, so exempt those requests and let
+        # the whole object cache instead.
+        if (req.http.Range && req.http.Range !~ "^bytes=[0-9]+-[0-9]*$") {
+            set req.enable_segmented_caching = false;
+        }
+        # Inverted ranges (start > end) are well-formed but unsatisfiable, and
+        # segmented caching answers them with a 501 too. Exempt them so the
+        # normal range handling can return a 416 instead.
+        if (req.http.Range ~ "^bytes=([0-9]+)-([0-9]+)$") {
+            if (std.atoi(re.group.1) > std.atoi(re.group.2)) {
+                set req.enable_segmented_caching = false;
+            }
+        }
+    }
+
     # Currently Fastly does not provide a way to access response headers when
     # the response is a 304 response. This is because the RFC states that only
     # a limit set of headers should be sent with a 304 response, and the rest
@@ -48,6 +63,19 @@ sub vcl_recv {
 
 #FASTLY recv
 
+    # This service only ever serves files, so reads, CORS preflights, and
+    # purges are the only methods with a legitimate use. Passing anything else
+    # through costs an origin request and returns a storage provider branded
+    # error to the client, so reject it here, up front, where the set of
+    # methods we accept is plain to see. Note this must stay below
+    # `#FASTLY recv`, which is what turns a PURGE into a FASTLYPURGE.
+    if (req.request != "HEAD" &&
+        req.request != "GET" &&
+        req.request != "OPTIONS" &&
+        req.request != "FASTLYPURGE") {
+      error 605 "Method Not Allowed";
+    }
+
     # We want to Force SSL for the WebUI by returning an error code directing people
     # to instead use HTTPS.
     if (!req.http.Fastly-SSL) {
@@ -62,6 +90,14 @@ sub vcl_recv {
     # Forbid clients without SNI support, except Fastly/cache-check (Note this is disabled at edge, but provide a fallback).
     if (!req.http.Fastly-FF && tls.client.servername == "" && req.http.User-Agent != "Fastly/cache-check") {
         error 604 "SNI is required";
+    }
+
+    # Only /packages/ is routed here, to object storage or Conveyor's legacy
+    # redirects. Anything else reaches Conveyor's documentation route, which
+    # costs two S3 lookups per 404, so a wordlist scan exhausts it. Purges
+    # never reach origin. https://github.com/pypi/infra/issues/246
+    if (req.request != "FASTLYPURGE" && req.url !~ "^/packages/") {
+        error 606 "Not Found";
     }
 
     # Admin Bypass! This is authenticated via a shared secret and allows an admin to
@@ -99,12 +135,11 @@ sub vcl_recv {
       error 204 "CORS preflight";
     }
 
-    # Do not bother to attempt to run the caching mechanisms for methods that
-    # are not generally safe to cache.
-    if (req.request != "HEAD" &&
-        req.request != "GET" &&
-        req.request != "FASTLYPURGE") {
-      return(pass);
+    # Anything else shaped like an OPTIONS request is not a preflight we can
+    # answer, so reject it here rather than letting object storage return a
+    # provider branded 501.
+    if (req.request == "OPTIONS") {
+      error 605 "Method Not Allowed";
     }
 
     return(lookup);
@@ -174,7 +209,7 @@ sub vcl_fetch {
     }
 
     # Check if we are serving a .metadata file, which are stored uncompressed
-    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*).metadata$" ) {
+    if (req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/(.*)\.metadata$" ) {
         # Always set a Vary header, even if we don't end up compressing
         # the object, because the uncompressed version should only be
         # used when the request does NOT request the compressed one.
@@ -562,6 +597,16 @@ sub vcl_error {
         if (stale.exists) {
             return(deliver_stale);
         }
+
+        # Fastly synthesizes a 503 without running vcl_fetch when a backend
+        # times out, refuses the connection, or fails TLS negotiation, so the
+        # 5xx restart in vcl_fetch never sees those failures. Restart here so
+        # that vcl_recv can send us to the archive backend.
+        if (req.restarts < 1
+                && (req.request == "GET" || req.request == "HEAD")
+                && req.url ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/") {
+            restart;
+        }
     }
 
     # Handle our "error" conditions which are really just ways to set synthetic
@@ -579,6 +624,23 @@ sub vcl_error {
         set obj.response = "SNI is required";
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"SNI is required."};
+        return (deliver);
+    }
+
+    if (obj.status == 605) {
+        set obj.status = 405;
+        set obj.response = "Method Not Allowed";
+        set obj.http.Allow = "GET, HEAD, OPTIONS";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"Method not allowed."};
+        return (deliver);
+    }
+
+    if (obj.status == 606) {
+        set obj.status = 404;
+        set obj.response = "Not Found";
+        set obj.http.Content-Type = "text/plain; charset=UTF-8";
+        synthetic {"Not found."};
         return (deliver);
     }
 
@@ -602,8 +664,17 @@ sub vcl_log {
     # If we're not executing a shielding request, and the URL is one of our file
     # URLs, and it's a GET request, and the response is either a 200 or a 206
     # then...
+    #
+    # Sidecar objects share the distribution's path prefix and its
+    # `x-pypi-file-*` metadata -- PEP 658 `.metadata` files, and the pre-2023
+    # `.asc` signatures still served for old releases -- so matching on the
+    # prefix alone counts fetching one as a download of the distribution
+    # itself. Match the three extensions PEP 527 allows for upload instead.
+    # Formats frozen since 2016 (`.egg`, `.exe`, `.msi`, `.rpm`, ...) are 0.7%
+    # of files and are deliberately not counted.
     if (!req.http.Fastly-FF
             && req.url.path ~ "^/packages/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{60}/"
+            && req.url.path ~ "(?i)\.(whl|tar\.gz|zip)$"
             && (req.request == "GET" || req.request == "OPTIONS")
             && http_status_matches(resp.status, "200,206")) {
 
