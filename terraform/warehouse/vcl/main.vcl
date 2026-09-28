@@ -333,6 +333,11 @@ sub vcl_recv {
       error 671 "mock-webkit-client redirect";
     }
 
+    # Flash messages live in the session; without a session cookie there are none.
+    if (req.url.path == "/_includes/unauthed/flash-messages/" && !req.http.Cookie:session_id) {
+      error 690 "No flash messages";
+    }
+
     # We have a number of items that we'll pass back to the origin.
     # Set a header to tell the backend if we're using https or http.
     if (req.http.Fastly-SSL) {
@@ -619,6 +624,10 @@ sub vcl_error {
         set obj.status = 406;
         set obj.http.Content-Type = "text/plain; charset=UTF-8";
         synthetic {"Mock WebKit User-Agents are currently blocked from accessing /simple resources without a trailing slash. This causes a redirect to the canonicalized URL with the trailing slash. PyPI maintainers have been struggling to handle a piece of software with this User-Agent overloading our backends with requests resulting in redirects. Please contact admin@pypi.org if you have information regarding what this software may be."};
+        return (deliver);
+    } else if (obj.status == 690) {
+        set obj.status = 200;
+        synthetic "";
         return (deliver);
     }
 
