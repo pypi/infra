@@ -222,6 +222,13 @@ sub vcl_recv {
         set req.http.Warehouse-Hashed-IP = var.hashed_ip;
     }
 
+    # Match ingress's case-insensitive API prefixes, including /simplefoo.
+    # The /_health/api rule must also be added in Cabotage.
+    declare local var.Application-API BOOL;
+    if (req.url.path ~ "(?i)^/(simple|pypi/.*/json|_health/api(/|$))") {
+        set var.Application-API = true;
+    }
+
 #FASTLY recv
 
 
@@ -351,9 +358,13 @@ sub vcl_recv {
         set req.http.Warehouse-Host = req.http.host;
     }
 
-    # On a POST, we want to skip the shielding and hit backends directly.
+    # On a POST, skip the shield and go straight to the selected backend.
     if (req.request == "POST") {
-        set req.backend = F_Application;
+        if (var.Application-API) {
+            set req.backend = F_Application_API;
+        } else {
+            set req.backend = F_Application;
+        }
     }
 
     # Do not bother to attempt to run the caching mechanisms for methods that
@@ -366,7 +377,7 @@ sub vcl_recv {
 
     # We don't ever want to cache our health URL. Outside systems should be
     # able to use it to reach past Fastly and get an end to end health check.
-    if (req.url == "/_health/") {
+    if (req.url.path ~ "(?i)^/_health/") {
         return(pass);
     }
 
