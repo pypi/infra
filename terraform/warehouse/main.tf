@@ -81,9 +81,10 @@ resource "fastly_service_vcl" "pypi" {
   }
 
   backend {
-    name             = "Application"
-    shield           = "iad-va-us"
-    auto_loadbalance = true
+    name              = "Application"
+    shield            = "iad-va-us"
+    auto_loadbalance  = false
+    request_condition = "Application Web"
 
     healthcheck = "Application Health"
 
@@ -99,12 +100,59 @@ resource "fastly_service_vcl" "pypi" {
     error_threshold       = 5
   }
 
+  backend {
+    name              = "Application_API"
+    shield            = "iad-va-us"
+    auto_loadbalance  = false
+    request_condition = "Application API"
+
+    healthcheck = "Application API Health"
+
+    address           = var.backend
+    port              = 443
+    use_ssl           = true
+    ssl_cert_hostname = var.backend
+    ssl_sni_hostname  = var.backend
+
+    connect_timeout       = 5000
+    first_byte_timeout    = 60000
+    between_bytes_timeout = 15000
+    error_threshold       = 5
+  }
+
+  # Select one backend per request, before Fastly selects its shield.
+  condition {
+    name      = "Application Web"
+    type      = "REQUEST"
+    statement = "!var.Application-API"
+  }
+
+  condition {
+    name      = "Application API"
+    type      = "REQUEST"
+    statement = "var.Application-API"
+  }
+
   healthcheck {
     name = "Application Health"
 
     host   = var.domain
     method = "GET"
-    path   = "/_health/"
+    path   = "/_health/web"
+
+    check_interval = 15000
+    timeout        = 5000
+    threshold      = 3
+    initial        = 4
+    window         = 5
+  }
+
+  healthcheck {
+    name = "Application API Health"
+
+    host   = var.domain
+    method = "GET"
+    path   = "/_health/api"
 
     check_interval = 15000
     timeout        = 5000
