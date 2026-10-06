@@ -8,6 +8,8 @@ sub vcl_recv {
 
     if (fastly.ff.visits_this_service == 0 && req.restarts == 0) {
       set req.http.Fastly-Client-IP = client.ip;
+      # Preserve an edge-generated ID across shielding and restarts, never trust a client ID.
+      set req.http.Warehouse-Request-ID = uuid.version4();
 
       # Geolocate the client IP address.
       # Must be done here to prevent Shield from supplying the shield's values.
@@ -404,6 +406,27 @@ sub vcl_fetch {
 
     # Handle 5XX (or any other unwanted status code)
     if (beresp.status >= 500 && beresp.status < 600) {
+        # Log the backend response before stale delivery, retry, or conversion to a synthetic 503.
+        log {"syslog "} req.service_id {" Log Edge Errors :: "}
+            {"{"ddsource":"fastly","status":"warning","event":"fastly_backend_failure","phase":"fetch""}
+            {","service":""} req.service_id
+            {"","date":""} strftime({"%Y-%m-%dT%H:%M:%SZ"}, now)
+            {"","request_id":""} json.escape(req.http.Warehouse-Request-ID)
+            {"","attempt_status":"} beresp.status
+            {","reason":""} json.escape(beresp.response)
+            {"","backend":""} json.escape("" + req.backend)
+            {"","backend_healthy":"} if(req.backend.healthy, "true", "false")
+            {","application_healthy":"} if(backend.F_Application.healthy, "true", "false")
+            {","shield_healthy":"} if(req.backend == ssl_shield_iad_va_us, if(req.backend.healthy, "true", "false"), "null")
+            {","pop":""} server.datacenter
+            {"","server":""} server.identity
+            {"","node":""} if(fastly.ff.visits_this_service > 0, "shield", "edge")
+            {"","restarts":"} req.restarts
+            {","elapsed_ms":"} time.elapsed.msec
+            {","method":""} json.escape(req.method)
+            {"","host":""} json.escape(req.http.Host)
+            {"","path":""} json.escape(req.url.path) {"" }"};
+
         # Flag for logging — must be set BEFORE stale/restart
         # req.http.* headers persist across restarts and into vcl_log
         set req.http.X-Origin-5xx = "true";
@@ -558,6 +581,29 @@ sub vcl_deliver {
 
 
 sub vcl_error {
+    # This must precede #FASTLY error: generated code can restart a native 503 there.
+    if (obj.status >= 500 && obj.status < 600) {
+        log {"syslog "} req.service_id {" Log Edge Errors :: "}
+            {"{"ddsource":"fastly","status":"warning","event":"fastly_backend_failure","phase":"error""}
+            {","service":""} req.service_id
+            {"","date":""} strftime({"%Y-%m-%dT%H:%M:%SZ"}, now)
+            {"","request_id":""} json.escape(req.http.Warehouse-Request-ID)
+            {"","attempt_status":"} obj.status
+            {","reason":""} json.escape(obj.response)
+            {"","backend":""} json.escape("" + req.backend)
+            {"","backend_healthy":"} if(req.backend.healthy, "true", "false")
+            {","application_healthy":"} if(backend.F_Application.healthy, "true", "false")
+            {","shield_healthy":"} if(req.backend == ssl_shield_iad_va_us, if(req.backend.healthy, "true", "false"), "null")
+            {","pop":""} server.datacenter
+            {"","server":""} server.identity
+            {"","node":""} if(fastly.ff.visits_this_service > 0, "shield", "edge")
+            {"","restarts":"} req.restarts
+            {","elapsed_ms":"} time.elapsed.msec
+            {","method":""} json.escape(req.method)
+            {"","host":""} json.escape(req.http.Host)
+            {"","path":""} json.escape(req.url.path) {"" }"};
+    }
+
 #FASTLY error
 
     # If we have a 5xx error and there is a stale object available, then we
@@ -642,4 +688,22 @@ sub vcl_error {
         return (deliver);
     }
 
+}
+
+sub vcl_log {
+#FASTLY log
+
+    # Distinguish failed attempts from the response delivered after a retry.
+    if (req.restarts > 0) {
+        log {"syslog "} req.service_id {" Log Edge Errors :: "}
+            {"{"ddsource":"fastly","status":"info","event":"fastly_retry_result""}
+            {","service":""} req.service_id
+            {"","date":""} strftime({"%Y-%m-%dT%H:%M:%SZ"}, now)
+            {"","request_id":""} json.escape(req.http.Warehouse-Request-ID)
+            {"","final_status":"} resp.status
+            {","pop":""} server.datacenter
+            {"","server":""} server.identity
+            {"","node":""} if(fastly.ff.visits_this_service > 0, "shield", "edge")
+            {"","restarts":"} req.restarts {"}"};
+    }
 }
