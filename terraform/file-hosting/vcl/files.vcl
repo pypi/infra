@@ -658,6 +658,7 @@ sub vcl_error {
 
 sub vcl_log {
     declare local var.Ship-Logs-To-Line-Haul BOOL;
+    declare local var.Linehaul-Range STRING;
 
 #FASTLY log
 
@@ -681,7 +682,13 @@ sub vcl_log {
         # We want to log an event stating that a download has taken place.
         if (var.Ship-Logs-To-Line-Haul) {  # Only log for linehaul if enabled
             if (!segmented_caching.is_inner_req) {  # Skip logging if it is an "inner_req" fetching just a segment of the file
-                log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-pypi-file-project "|" resp.http.x-pypi-file-version "|" resp.http.x-pypi-file-package-type "|" req.http.user-agent;
+                # The Range header comes from the client and is logged before the
+                # user agent, so only log it when it is a plain byte range. A "|"
+                # in it would shift every field after it.
+                if (req.http.Range ~ "^bytes=[0-9, -]*$") {
+                    set var.Linehaul-Range = req.http.Range;
+                }
+                log {"syslog "} req.service_id {" Linehaul GCS :: "} "download|" now "|" client.geo.country_code "|" req.url.path "|" tls.client.protocol "|" tls.client.cipher "|" resp.http.x-pypi-file-project "|" resp.http.x-pypi-file-version "|" resp.http.x-pypi-file-package-type "|" req.request "|" resp.status "|" resp.body_bytes_written "|" var.Linehaul-Range "|" req.http.user-agent;
             }
         }
 
