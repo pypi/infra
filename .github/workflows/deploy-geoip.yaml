@@ -1,0 +1,22 @@
+name: Deploy Compute@Edge GeoIp
+on:
+  push:
+#    branches: [main] 
+## Note: by removing the branches value, the workflow will run when a push is made to any branch. This is to serve for testing. 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install project dependencies
+      run: npm install
+      working-directory: fastly-compute/geoip
+
+    - name: Deploy to Compute@Edge
+      uses: fastly/compute-actions@v5
+      with:
+        project_directory: ./fastly-compute/geoip
+      env:
+        FASTLY_API_TOKEN: ${{ secrets.FASTLY_API_TOKEN }}
