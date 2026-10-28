@@ -103,3 +103,103 @@ resource "aws_iam_user_policy" "archive_storage_access_policy" {
 resource "aws_iam_access_key" "archive_storage_access_key" {
   user = aws_iam_user.archive_storage_access_user.name
 }
+
+################################################################################
+# Archive Object Inventory
+################################################################################
+data "aws_caller_identity" "current" {}
+
+resource "aws_s3_bucket" "archive_inventory" {
+  provider = aws.us-west-2
+  bucket = "${var.files_bucket}-archive-inventory"
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "archive_inventory_lifecycle_config" {
+  provider = aws.us-west-2
+  bucket   = aws_s3_bucket.archive_inventory.id
+
+  rule {
+    id = "abandon-incomplete-uploads"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "inventory_access_block" {
+  bucket = aws_s3_bucket.archive_inventory.id
+
+  block_public_acls = true
+  block_public_policy = true
+  ignore_public_acls = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "inventory_versioning" {
+  bucket = aws_s3_bucket.archive_inventory.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_policy" "inventory_policy" {
+  bucket = aws_s3_bucket.archive_inventory.id
+  policy = data.aws_iam_policy_document.inventory_bucket_policy
+}
+
+
+resource "aws_s3_bucket_inventory" "archive_object_inventory" {
+  bucket = aws_s3_bucket.archive_storage_glacier_bucket
+  name = "EntireBucketDaily"
+
+  included_object_versions = "All"
+
+  schedule {
+    frequency = "Daily"
+  }
+
+  destination {
+    bucket {
+      format = "CSV"
+      bucket_arn = aws_s3_bucket.archive_inventory.arn
+    }
+  }
+}
+
+data "aws_iam_policy_document" "inventory_bucket_policy" {
+  statement {
+    sid = "AllowS3InventoryWrite"
+    effect = "Allow"
+
+    principals {
+      type = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
+
+    actions = ["s3:PutObject"]
+
+    resources = ["${aws_s3_bucket.archive_inventory.arn}/*"]
+
+     condition {
+       test = "ArnLike"
+       variable = "aws:SourceArn"
+       values = [aws_s3_bucket.archive_inventory.arn]
+     }
+
+     condition {
+       test = "StringEquals"
+       variable = "aws:SourceAccount"
+       values = [data.aws_caller_identity.current.account_id]
+     }
+
+     condition {
+       test = "StringEquals"
+       variable = "s3:x-amz-acl"
+       values = ["bucket-owner-full-control"]
+     }
+  }
+}
