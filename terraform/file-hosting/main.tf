@@ -153,7 +153,7 @@ resource "aws_s3_bucket_policy" "inventory_policy" {
 
 
 resource "aws_s3_bucket_inventory" "archive_object_inventory" {
-  bucket = aws_s3_bucket.archive_storage_glacier_bucket
+  bucket = aws_s3_bucket.archive_storage_glacier_bucket.id
   name = "EntireBucketDaily"
 
   included_object_versions = "All"
