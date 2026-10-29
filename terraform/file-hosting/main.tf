@@ -148,7 +148,7 @@ resource "aws_s3_bucket_versioning" "inventory_versioning" {
 
 resource "aws_s3_bucket_policy" "inventory_policy" {
   bucket = aws_s3_bucket.archive_inventory.id
-  policy = data.aws_iam_policy_document.inventory_bucket_policy
+  policy = data.aws_iam_policy_document.inventory_bucket_policy.json
 }
 
 
