@@ -187,7 +187,7 @@ data "aws_iam_policy_document" "inventory_bucket_policy" {
      condition {
        test = "ArnLike"
        variable = "aws:SourceArn"
-       values = [aws_s3_bucket.archive_inventory.arn]
+       values = [aws_s3_bucket.archive_storage_glacier_bucket.arn]
      }
 
      condition {
