@@ -111,7 +111,7 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_s3_bucket" "archive_inventory" {
   provider = aws.us-west-2
-  bucket = "${var.files_bucket}-archive-inventory"
+  bucket   = "${var.files_bucket}-archive-inventory"
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "archive_inventory_lifecycle_config" {
@@ -119,7 +119,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "archive_inventory_lifecycle_co
   bucket   = aws_s3_bucket.archive_inventory.id
 
   rule {
-    id = "abandon-incomplete-uploads"
+    id     = "abandon-incomplete-uploads"
     status = "Enabled"
 
     filter {}
@@ -131,52 +131,58 @@ resource "aws_s3_bucket_lifecycle_configuration" "archive_inventory_lifecycle_co
 }
 
 resource "aws_s3_bucket_public_access_block" "inventory_access_block" {
-  bucket = aws_s3_bucket.archive_inventory.id
+  provider = aws.us-west-2
+  bucket   = aws_s3_bucket.archive_inventory.id
 
-  block_public_acls = true
-  block_public_policy = true
-  ignore_public_acls = true
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_versioning" "inventory_versioning" {
-  bucket = aws_s3_bucket.archive_inventory.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
 resource "aws_s3_bucket_policy" "inventory_policy" {
-  bucket = aws_s3_bucket.archive_inventory.id
-  policy = data.aws_iam_policy_document.inventory_bucket_policy.json
+  provider = aws.us-west-2
+  bucket   = aws_s3_bucket.archive_inventory.id
+  policy   = data.aws_iam_policy_document.inventory_bucket_policy.json
 }
 
 
 resource "aws_s3_bucket_inventory" "archive_object_inventory" {
-  bucket = aws_s3_bucket.archive_storage_glacier_bucket.id
-  name = "EntireBucketDaily"
+  provider = aws.us-west-2
+  bucket   = aws_s3_bucket.archive_storage_glacier_bucket.id
+  name     = "EntireBucketWeekly"
 
   included_object_versions = "All"
 
   schedule {
-    frequency = "Daily"
+    frequency = "Weekly"
   }
 
   destination {
     bucket {
-      format = "CSV"
+      format     = "CSV"
       bucket_arn = aws_s3_bucket.archive_inventory.arn
     }
   }
+
+  optional_fields = [
+    "Size",
+    "LastModifiedDate",
+    "StorageClass",
+    "ETag",
+    "ObjectLockMode",
+    "ObjectLockRetainUntilDate",
+    "ChecksumAlgorithm",
+  ]
 }
 
 data "aws_iam_policy_document" "inventory_bucket_policy" {
   statement {
-    sid = "AllowS3InventoryWrite"
+    sid    = "AllowS3InventoryWrite"
     effect = "Allow"
 
     principals {
-      type = "Service"
+      type        = "Service"
       identifiers = ["s3.amazonaws.com"]
     }
 
@@ -184,22 +190,22 @@ data "aws_iam_policy_document" "inventory_bucket_policy" {
 
     resources = ["${aws_s3_bucket.archive_inventory.arn}/*"]
 
-     condition {
-       test = "ArnLike"
-       variable = "aws:SourceArn"
-       values = [aws_s3_bucket.archive_storage_glacier_bucket.arn]
-     }
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = [aws_s3_bucket.archive_storage_glacier_bucket.arn]
+    }
 
-     condition {
-       test = "StringEquals"
-       variable = "aws:SourceAccount"
-       values = [data.aws_caller_identity.current.account_id]
-     }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
 
-     condition {
-       test = "StringEquals"
-       variable = "s3:x-amz-acl"
-       values = ["bucket-owner-full-control"]
-     }
+    condition {
+      test     = "StringEquals"
+      variable = "s3:x-amz-acl"
+      values   = ["bucket-owner-full-control"]
+    }
   }
 }
