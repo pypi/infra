@@ -395,6 +395,35 @@ sub vcl_recv {
 }
 
 
+sub vcl_miss {
+#FASTLY miss
+
+    # Fastly drops Accept-Encoding: identity, and with no Accept-Encoding the
+    # Traefik ingress asks origin for gzip and decompresses it into a chunked
+    # response without a Content-Length. If the gzip stream is cut short, that
+    # response can be cached truncated. Ask for identity explicitly so origin
+    # sends a Content-Length.
+    # https://github.com/pypi/warehouse/issues/20854
+    if (!bereq.http.Accept-Encoding) {
+        set bereq.http.Accept-Encoding = "identity";
+    }
+
+    return(fetch);
+}
+
+
+sub vcl_pass {
+#FASTLY pass
+
+    # See vcl_miss.
+    if (!bereq.http.Accept-Encoding) {
+        set bereq.http.Accept-Encoding = "identity";
+    }
+
+    return(pass);
+}
+
+
 sub vcl_fetch {
 
     # These are newer kinds of redirects which should be able to be cached by
