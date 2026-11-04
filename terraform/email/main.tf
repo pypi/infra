@@ -5,6 +5,7 @@ terraform {
       configuration_aliases = [aws.email]
     }
   }
+  required_version = ">= 1.14.0"
 }
 
 provider "aws" {

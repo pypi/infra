@@ -4,5 +4,6 @@ terraform {
       source  = "fastly/fastly"
     }
   }
+  required_version = ">= 1.14.0"
 }
 
