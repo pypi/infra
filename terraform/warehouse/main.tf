@@ -13,13 +13,8 @@ variable "fastly_toppops_enabled" { type = bool }
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
 
-variable "ngwaf_site_name" { type = string }
-variable "ngwaf_email" { type = string }
-variable "ngwaf_token" { type = string }
-variable "activate_ngwaf_service" { type = bool }
 variable "edge_security_dictionary" { type = string }
 variable "fastly_key" { type = string }
-variable "ngwaf_percent_enabled" { type = number }
 variable "datadog_token" { type = string }
 
 
@@ -290,58 +285,45 @@ resource "fastly_service_vcl" "pypi" {
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
+}
 
-  # NGWAF
-  dynamic "dictionary" {
-    for_each = var.activate_ngwaf_service ? [1] : []
-    content {
-      name          = var.edge_security_dictionary
-      force_destroy = true
-    }
-  }
 
-  dynamic "dynamicsnippet" {
-    for_each = var.activate_ngwaf_service ? [1] : []
-    content {
-      name     = "ngwaf_config_init"
-      type     = "init"
-      priority = 0
-    }
-  }
-
-  dynamic "dynamicsnippet" {
-    for_each = var.activate_ngwaf_service ? [1] : []
-    content {
-      name     = "ngwaf_config_miss"
-      type     = "miss"
-      priority = 9000
-    }
-  }
-
-  dynamic "dynamicsnippet" {
-    for_each = var.activate_ngwaf_service ? [1] : []
-    content {
-      name     = "ngwaf_config_pass"
-      type     = "pass"
-      priority = 9000
-    }
-  }
-
-  dynamic "dynamicsnippet" {
-    for_each = var.activate_ngwaf_service ? [1] : []
-    content {
-      name     = "ngwaf_config_deliver"
-      type     = "deliver"
-      priority = 9000
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      product_enablement,
-    ]
+resource "fastly_ngwaf_workspace" "pypi_prod" {
+  auto_enable_new_virtual_patches = false
+  client_ip_headers               = []
+  default_blocking_response_code  = 406
+  default_redirect_url            = null
+  description                     = ""
+  ip_anonymization                = null
+  mode                            = "block"
+  name                            = "pypi production"
+  attack_signal_thresholds {
+    immediate   = false
+    one_hour    = 100
+    one_minute  = 1
+    ten_minutes = 60
   }
 }
+
+
+resource "fastly_ngwaf_workspace" "pypi_test" {
+  auto_enable_new_virtual_patches = false
+  client_ip_headers               = []
+  default_blocking_response_code  = 406
+  default_redirect_url            = null
+  description                     = ""
+  ip_anonymization                = null
+  mode                            = "block"
+  name                            = "pypi testing"
+  attack_signal_thresholds {
+    immediate   = false
+    one_hour    = 100
+    one_minute  = 1
+    ten_minutes = 60
+  }
+}
+
+
 
 
 resource "aws_route53_record" "primary" {

@@ -35,7 +35,7 @@ resource "b2_bucket" "primary_storage_bucket_backblaze" {
   bucket_info = {}
   bucket_type = "allPrivate"
   default_server_side_encryption {
-    mode = "none"
+    mode = "SSE-B2"
   }
   file_lock_configuration {
     is_file_lock_enabled = true
