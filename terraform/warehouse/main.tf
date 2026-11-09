@@ -287,6 +287,45 @@ resource "fastly_service_vcl" "pypi" {
   }
 }
 
+
+resource "fastly_ngwaf_workspace" "pypi_prod" {
+  auto_enable_new_virtual_patches = false
+  client_ip_headers               = []
+  default_blocking_response_code  = 406
+  default_redirect_url            = null
+  description                     = ""
+  ip_anonymization                = null
+  mode                            = "block"
+  name                            = "pypi production"
+  attack_signal_thresholds {
+    immediate   = false
+    one_hour    = 100
+    one_minute  = 1
+    ten_minutes = 60
+  }
+}
+
+
+resource "fastly_ngwaf_workspace" "pypi_test" {
+  auto_enable_new_virtual_patches = false
+  client_ip_headers               = []
+  default_blocking_response_code  = 406
+  default_redirect_url            = null
+  description                     = ""
+  ip_anonymization                = null
+  mode                            = "block"
+  name                            = "pypi testing"
+  attack_signal_thresholds {
+    immediate   = false
+    one_hour    = 100
+    one_minute  = 1
+    ten_minutes = 60
+  }
+}
+
+
+
+
 resource "aws_route53_record" "primary" {
   zone_id = var.zone_id
   name    = var.domain
