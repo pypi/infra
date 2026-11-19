@@ -120,6 +120,7 @@ module "pypi" {
   fastly_key               = var.credentials["fastly"]
   ngwaf_percent_enabled    = 100
   datadog_token            = var.datadog_token
+  environment              = "prod"
 }
 
 module "test-pypi" {
@@ -157,6 +158,7 @@ module "test-pypi" {
   fastly_key               = var.credentials["fastly"]
   ngwaf_percent_enabled    = 100
   datadog_token            = var.datadog_token
+  environment              = "test"
 }
 
 module "file-hosting" {
