@@ -13,8 +13,13 @@ variable "fastly_toppops_enabled" { type = bool }
 variable "fastly_endpoints" { type = map(any) }
 variable "domain_map" { type = map(any) }
 
+variable "ngwaf_site_name" { type = string }
+variable "ngwaf_email" { type = string }
+variable "ngwaf_token" { type = string }
+variable "activate_ngwaf_service" { type = string }
 variable "edge_security_dictionary" { type = string }
 variable "fastly_key" { type = string }
+variable "ngwaf_percent_enabled" { type = string }
 variable "datadog_token" { type = string }
 variable "environment" { type = string }
 
@@ -286,7 +291,59 @@ resource "fastly_service_vcl" "pypi" {
     type      = "RESPONSE"
     statement = "req.http.Fastly-Client-IP == \"127.0.0.1\" && req.http.Fastly-Client-IP != \"127.0.0.1\""
   }
+
+  # NGWAF
+  dynamic "dictionary" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name          = var.edge_security_dictionary
+      force_destroy = true
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_init"
+      type     = "init"
+      priority = 0
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_miss"
+      type     = "miss"
+      priority = 9000
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_pass"
+      type     = "pass"
+      priority = 9000
+    }
+  }
+
+  dynamic "dynamicsnippet" {
+    for_each = var.activate_ngwaf_service ? [1] : []
+    content {
+      name     = "ngwaf_config_deliver"
+      type     = "deliver"
+      priority = 9000
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      product_enablement,
+    ]
+  }
 }
+
 
 
 resource "fastly_ngwaf_workspace" "pypi_prod" {
