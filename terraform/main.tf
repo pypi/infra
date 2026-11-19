@@ -112,14 +112,10 @@ module "pypi" {
   domain_map       = local.domain_map
 
   # NGWAF
-  ngwaf_site_name          = "pypi-prod"
-  ngwaf_email              = var.ngwaf_email
-  ngwaf_token              = var.ngwaf_token
-  activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
   fastly_key               = var.credentials["fastly"]
-  ngwaf_percent_enabled    = 100
   datadog_token            = var.datadog_token
+  environment              = "prod"
 }
 
 module "test-pypi" {
@@ -149,14 +145,10 @@ module "test-pypi" {
   domain_map       = local.domain_map
 
   # NGWAF
-  ngwaf_site_name          = "pypi-test"
-  ngwaf_email              = var.ngwaf_email
-  ngwaf_token              = var.ngwaf_token
-  activate_ngwaf_service   = true
   edge_security_dictionary = "Edge_Security"
   fastly_key               = var.credentials["fastly"]
-  ngwaf_percent_enabled    = 100
   datadog_token            = var.datadog_token
+  environment              = "test"
 }
 
 module "file-hosting" {

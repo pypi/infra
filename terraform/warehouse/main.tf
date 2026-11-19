@@ -16,6 +16,7 @@ variable "domain_map" { type = map(any) }
 variable "edge_security_dictionary" { type = string }
 variable "fastly_key" { type = string }
 variable "datadog_token" { type = string }
+variable "environment" { type = string }
 
 
 locals {
@@ -289,6 +290,8 @@ resource "fastly_service_vcl" "pypi" {
 
 
 resource "fastly_ngwaf_workspace" "pypi_prod" {
+  count = var.environment == "prod" ? 1 : 0
+
   auto_enable_new_virtual_patches = false
   client_ip_headers               = []
   default_blocking_response_code  = 406
@@ -307,6 +310,8 @@ resource "fastly_ngwaf_workspace" "pypi_prod" {
 
 
 resource "fastly_ngwaf_workspace" "pypi_test" {
+  count = var.environment == "test" ? 1 : 0
+
   auto_enable_new_virtual_patches = false
   client_ip_headers               = []
   default_blocking_response_code  = 406
@@ -322,8 +327,6 @@ resource "fastly_ngwaf_workspace" "pypi_test" {
     ten_minutes = 60
   }
 }
-
-
 
 
 resource "aws_route53_record" "primary" {
