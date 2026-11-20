@@ -14,6 +14,8 @@ variable "ngwaf_percent_enabled" { type = number }
 resource "fastly_service_vcl" "inspector" {
   name     = var.name
   activate = true
+  # Inspection HTML includes mutable PyPI status; origin cache headers take precedence.
+  default_ttl = 60
 
   domain {
     name = var.domain
@@ -50,6 +52,55 @@ resource "fastly_service_vcl" "inspector" {
     threshold      = 3
     initial        = 4
     window         = 5
+  }
+
+  request_setting {
+    name          = "HTTPS and fresh status"
+    force_ssl     = true
+    max_stale_age = 0
+  }
+
+  condition {
+    name = "Uncacheable request"
+    type = "REQUEST"
+    # Keep the default cache key, including the homepage's ?project= query.
+    statement = "req.url.path == \"/_health/\" || req.http.Authorization || (req.request != \"GET\" && req.request != \"HEAD\" && req.request != \"FASTLYPURGE\")"
+  }
+
+  request_setting {
+    name              = "Pass uncacheable requests"
+    request_condition = "Uncacheable request"
+    action            = "pass"
+  }
+
+  condition {
+    name      = "Uncacheable response"
+    type      = "CACHE"
+    statement = "beresp.status != 200 || beresp.http.Set-Cookie || beresp.http.Cache-Control ~ \"(?i)(private|no-store|no-cache)\" || beresp.http.Surrogate-Control ~ \"(?i)(private|no-store|no-cache)\""
+  }
+
+  cache_setting {
+    name            = "Pass uncacheable responses"
+    cache_condition = "Uncacheable response"
+    action          = "pass"
+  }
+
+  header {
+    name        = "Require authenticated purges"
+    type        = "request"
+    action      = "set"
+    destination = "http.Fastly-Purge-Requires-Auth"
+    source      = "\"1\""
+  }
+
+  # Support whole-app purges while leaving any future origin tags intact.
+  header {
+    name          = "Inspector purge tag"
+    type          = "cache"
+    action        = "set"
+    destination   = "http.Surrogate-Key"
+    source        = "\"inspector\""
+    ignore_if_set = true
   }
 
   # NGWAF
